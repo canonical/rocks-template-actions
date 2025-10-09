@@ -30,12 +30,12 @@ runs:
       shell: bash
       run: |
         python3 -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r .github/actions/read-ci-config/requirements.txt
 
     - name: Read and validate .github/ci.yaml
       shell: bash
       id: read-ci-config
       run: |
-        python3 src/process_ci_config.py \
+        python3 .github/actions/read-ci-config/src/process_ci_config.py \
           ${{ inputs.ci-config-path }}
 
