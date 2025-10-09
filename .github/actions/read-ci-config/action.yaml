@@ -1,6 +1,12 @@
 name: Read CI Config
 description: Read and validate .github/ci.yaml configuration file
 
+inputs:
+  ci-config-path:
+    description: "Path to the CI configuration file"
+    required: false
+    default: ".github/ci.yaml"
+
 outputs:
   ghcr-upload:
     description: "Whether to upload to GHCR"
@@ -31,4 +37,5 @@ runs:
       id: read-ci-config
       run: |
         python3 .github/actions/read-ci-config/src/process_ci_config.py \
-          .github/ci.yaml
+          ${{ inputs.ci-config-path }}
+
