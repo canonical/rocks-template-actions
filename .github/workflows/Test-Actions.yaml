@@ -1,4 +1,4 @@
-name: Dynamic Pytest Matrix
+name: Test Actions
 
 on:
   pull_request:
