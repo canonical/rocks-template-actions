@@ -1,8 +1,13 @@
 import pytest
+import sys
+import os
 import yaml
 from pydantic import ValidationError
-from src.process_ci_config import CIConfig, ImageEntry
 from textwrap import dedent
+
+# Import action src
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../actions/read-ci-config')))
+from src.process_ci_config import CIConfig, ImageEntry
 
 GENERAL_CI_YAML_WITH_REGISTRIES = """
 version: 1

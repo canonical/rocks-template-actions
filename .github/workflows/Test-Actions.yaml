@@ -1,0 +1,39 @@
+name: Dynamic Pytest Matrix
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+    paths: [ "actions/**" ]
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    name: Run pytest
+    runs-on: ubuntu-latest
+    env:
+      PYTEST_RESULT_PATH: pytest_results.xml
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: |
+          pip install -r tests/etc/requirements.txt
+
+      - name: Run pytest
+        continue-on-error: true
+        run: |
+          python3 -m pytest --junit-xml "${{ env.PYTEST_RESULT_PATH }}"
+
+      - name: Upload pytest Result
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PYTEST_RESULT_PATH }}
+          path: ${{ env.PYTEST_RESULT_PATH }}
+          if-no-files-found: error
