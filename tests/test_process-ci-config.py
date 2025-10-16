@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from textwrap import dedent
 
 # Import action src
-sys.path.append(str((Path(__file__).parents[2] / 'actions' / 'read-ci-config').resolve()))
+sys.path.append(str((Path(__file__).parents[1] / 'actions' / 'read-ci-config').resolve()))
 from src.process_ci_config import CIConfig, ImageEntry
 
 GENERAL_CI_YAML_WITH_REGISTRIES = """
