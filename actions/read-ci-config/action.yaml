@@ -38,4 +38,5 @@ runs:
       run: |
         ci_config_path="$(realpath "${{ inputs.ci-config-path }}")"
         cd ${{ github.action_path }} && \
-        python3 -m src.process_ci_config "$ci_config_path"
+        python3 -m src.process_ci_config --repo_root ${{ github.workspace }} \
+          "$ci_config_path"
