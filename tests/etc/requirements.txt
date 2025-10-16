@@ -1,2 +1,0 @@
-pytest
--r ../../actions/read-ci-config/requirements.txt

@@ -23,7 +23,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r tests/etc/requirements.txt
+          pip install -r tests/requirements.txt
 
       - name: Run pytest
         continue-on-error: true
