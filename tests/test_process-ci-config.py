@@ -135,14 +135,13 @@ def test_image_name_and_tag_with_invalid_base_should_fail(fake_open):
 
 
 def test_image_with_undefined_registry_should_fail():
-    sample_yaml = (
-        GENERAL_CI_YAML_WITH_REGISTRIES
-        + """
-images:
-    - directory: mock-rock/1.0
-      registries:
-        - undefined-registry
-"""
+    sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
+        """\
+        images:
+            - directory: mock-rock/1.0
+              registries:
+                - undefined-registry
+        """
     )
     config_data = yaml.safe_load(sample_yaml)
     with pytest.raises(
@@ -180,14 +179,13 @@ def test_image_with_other_wildcard_should_fail():
 
 
 def test_pydantic_model_loads_configuration():
-    sample_yaml = (
-        GENERAL_CI_YAML_WITH_REGISTRIES
-        + """
-images:
-  - directory: mock-rock/1.0
-    registries:
-      - docker.io
-"""
+    sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
+        """\
+        images:
+            - directory: mock-rock/1.0
+              registries:
+                - docker.io
+        """
     )
     config_data = yaml.safe_load(sample_yaml)
     ci_config = CIConfig(**config_data)
@@ -241,20 +239,22 @@ images:
 
 
 def test_invalid_registry_auth_method_should_fail():
-    sample_yaml = """
-version: 1
-ghcr:
-  upload: true
-  cve-scan: false
-registries:
-  ecr:
-    uri: public.ecr.aws/rocksdev
-    auth:
-      - method: ecr
-        config:
-          username: ECR_CREDS_USR
-          password: ECR_CREDS_PSW
+    sample_yaml = dedent(
+        """\
+        version: 1
+        ghcr:
+            upload: true
+            cve-scan: false
+        registries:
+            ecr:
+                uri: public.ecr.aws/rocksdev
+                auth:
+                    - method: ecr
+                      config:
+                        username: ECR_CREDS_USR
+                        password: ECR_CREDS_PSW
 """
+    )
     config_data = yaml.safe_load(sample_yaml)
     with pytest.raises(ValidationError) as exc_info:
         _ = CIConfig(**config_data)
@@ -287,15 +287,14 @@ def test_empty_images_should_pass():
 
 
 def test_valid_simple_configuration_should_pass(fake_open):
-    sample_yaml = (
-        GENERAL_CI_YAML_WITH_REGISTRIES
-        + """
-images:
-  - directory: mock-rock/1.0
-    registries:
-      - docker.io
-      - ecr
-      - ecr-public
+    sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
+        """
+        images:
+            - directory: mock-rock/1.0
+              registries:
+                - docker.io
+                - ecr
+                - ecr-public
 """
     )
     config_data = yaml.safe_load(sample_yaml)
@@ -411,22 +410,21 @@ def test_duplicated_image_directory_should_deduplicate(fake_open):
 
 
 def test_image_with_duplicated_registries_should_deduplicate(fake_open):
-    sample_yaml = (
-        GENERAL_CI_YAML_WITH_REGISTRIES
-        + """
-images:
-  - directory: mock-rock/1.0
-    registries:
-      - docker.io
-      - ecr
-      - docker.io
-  - directory: mock-rock/1.0
-    registries:
-      - ecr
-      - ecr
-  - directory: mock-rock/1.0
-    registries:
-      - acr
+    sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
+        """\
+        images:
+            - directory: mock-rock/1.0
+              registries:
+                - docker.io
+                - ecr
+                - docker.io
+            - directory: mock-rock/1.0
+              registries:
+                - ecr
+                - ecr
+            - directory: mock-rock/1.0
+              registries:
+                - acr
 """
     )
     config_data = yaml.safe_load(sample_yaml)
@@ -527,23 +525,22 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open):
 
 
 def test_multiple_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open):
-    sample_yaml = (
-        GENERAL_CI_YAML_WITH_REGISTRIES
-        + """
-images:
-  - directory: "*"
-    registries:
-      - docker.io
-  - directory: "mock-rock/1.0"
-    registries:
-      - ecr
-  - directory: "another-rock/2.0"
-    registries:
-      - acr
-  - directory: "*"
-    registries:
-      - ecr
-"""
+    sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
+        """
+        images:
+        - directory: "*"
+          registries:
+            - docker.io
+        - directory: "mock-rock/1.0"
+          registries:
+            - ecr
+        - directory: "another-rock/2.0"
+          registries:
+            - acr
+        - directory: "*"
+          registries:
+            - ecr
+        """
     )
     config_data = yaml.safe_load(sample_yaml)
     ci_config = CIConfig(**config_data)
@@ -627,16 +624,18 @@ def test_yaml_missing_images_should_fail():
 
 
 def test_yaml_missing_registries_should_fail():
-    sample_yaml = """
-version: 1
-ghcr:
-  upload: true
-  cve-scan: false
-images:
-  - directory: mock-rock/1.0
-    registries:
-      - docker.io
+    sample_yaml = dedent(
+        """\
+        version: 1
+        ghcr:
+            upload: true
+            cve-scan: false
+        images:
+            - directory: mock-rock/1.0
+              registries:
+                - docker.io
 """
+    )
     config_data = yaml.safe_load(sample_yaml)
     with pytest.raises(ValidationError):
         _ = CIConfig(**config_data)
@@ -655,23 +654,25 @@ def test_yaml_missing_ghcr_should_fail():
 
 
 def test_registy_secrets_without_prefix_should_fail():
-    sample_yaml = """
-version: 1
-ghcr:
-  upload: true
-  cve-scan: false
-registries:
-  docker.io:
-    uri: docker.io/ubuntu
-    auth:
-      - method: basic
-        config:
-          username: DOCKER_IO_USERNAME
-          password: DOCKER_IO_PASSWORD
-images:
-  - directory: '*'
-"""
+    sample_yaml = dedent(
+        """
+        version: 1
+        ghcr:
+            upload: true
+            cve-scan: false
+        registries:
+            docker.io:
+                uri: docker.io/ubuntu
+                auth:
+                  - method: basic
+                    config:
+                    username: DOCKER_IO_USERNAME
+                    password: DOCKER_IO_PASSWORD
+        images:
+            - directory: '*'
+    """
+    )
     config_data = yaml.safe_load(sample_yaml)
     with pytest.raises(ValidationError) as exc_info:
         _ = CIConfig(**config_data)
-    assert "Credential name must start with 'secrets.'" in str(exc_info.value)
+        assert "Credential name must start with 'secrets.'" in str(exc_info.value)
