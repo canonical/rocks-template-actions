@@ -107,16 +107,16 @@ def fake_open(monkeypatch):
 
 
 def test_image_name_and_tag_pass(fake_open):
-    name, tag = CIConfig.image_name_and_tag("", "mock-rock/1.0")
+    name, tag = CIConfig.image_name_and_tag("mock-rock/1.0")
     assert name == "mock-rock"
     assert tag == "1.0-24.04_edge"
-    name, tag = CIConfig.image_name_and_tag("", "another-rock/2.0")
+    name, tag = CIConfig.image_name_and_tag("another-rock/2.0")
     assert name == "another-rock"
     assert tag == "2.0-24.04_edge"
 
 
 def test_image_name_and_tag_with_latest_version_pass(fake_open, capsys):
-    name, tag = CIConfig.image_name_and_tag("", "latest-rock/latest")
+    name, tag = CIConfig.image_name_and_tag("latest-rock/latest")
     assert name == "latest-rock"
     assert tag == "latest-24.04_edge"
     captured = capsys.readouterr()
@@ -131,7 +131,7 @@ def test_image_name_and_tag_with_invalid_base_should_fail(fake_open):
         ValueError,
         match="Base 'ubuntu:noble' in 'invalid-rock/1.0/rockcraft.yaml' does not match the expected pattern.",
     ):
-        _ = CIConfig.image_name_and_tag("", "invalid-rock/1.0")
+        _ = CIConfig.image_name_and_tag("invalid-rock/1.0")
 
 
 def test_image_with_undefined_registry_should_fail():
@@ -152,13 +152,13 @@ def test_image_with_undefined_registry_should_fail():
 
 
 def test_image_name_and_tag_with_devel_base_pass(fake_open):
-    name, tag = CIConfig.image_name_and_tag("", "devel-rock/1.0")
+    name, tag = CIConfig.image_name_and_tag("devel-rock/1.0")
     assert name == "devel-rock"
     assert tag == "1.0-devel_edge"
 
 
 def test_image_base_with_at_symbol_should_pass(fake_open):
-    name, tag = CIConfig.image_name_and_tag("", "latest-rock/latest")
+    name, tag = CIConfig.image_name_and_tag("latest-rock/latest")
     assert name == "latest-rock"
     assert tag == "latest-24.04_edge"
 
