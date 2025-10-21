@@ -17,6 +17,9 @@ outputs:
   build-matrix:
     description: "JSON array of build matrix"
     value: ${{ steps.read-ci-config.outputs.build-matrix }}
+  upload-matrix:
+    description: "JSON array of upload matrix"
+    value: ${{ steps.read-ci-config.outputs.upload-matrix }}
 
 runs:
   using: "composite"
@@ -36,6 +39,7 @@ runs:
       shell: bash
       id: read-ci-config
       run: |
-        python3 ${{ github.action_path }}/src/process_ci_config.py \
-          ${{ inputs.ci-config-path }}
-
+        ci_config_path="$(realpath "${{ inputs.ci-config-path }}")"
+        cd ${{ github.action_path }} && \
+        python3 -m src.process_ci_config --repo-root ${{ github.workspace }} \
+          "$ci_config_path"
