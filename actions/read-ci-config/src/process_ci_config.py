@@ -119,7 +119,6 @@ class ImageEntry(BaseModel):
             service for service in v if service not in UBUNTU_PRO_SERVICES
         ]
         if invalid_services:
-            # Only raise the first invalid one, as per your message
             raise ValueError(f"Invalid Ubuntu Pro service '{invalid_services[0]}'")
         return v
 
