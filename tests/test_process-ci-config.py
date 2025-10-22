@@ -151,6 +151,25 @@ def test_image_with_undefined_registry_should_fail():
         _ = CIConfig(**config_data)
 
 
+def test_image_with_invalid_pro_service_should_fail():
+    sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
+        """\
+        images:
+            - directory: mock-rock/1.0
+              pro-services:
+                - invalid_service
+              registries:
+                - undefined-registry
+        """
+    )
+    config_data = yaml.safe_load(sample_yaml)
+    with pytest.raises(
+        ValueError,
+        match="Invalid Ubuntu Pro service 'invalid_service'",
+    ):
+        _ = CIConfig(**config_data)
+
+
 def test_image_name_and_tag_with_devel_base_pass(fake_open):
     name, tag = CIConfig.image_name_and_tag("", "devel-rock/1.0")
     assert name == "devel-rock"
@@ -183,6 +202,8 @@ def test_pydantic_model_loads_configuration():
         """\
         images:
             - directory: mock-rock/1.0
+              pro-services:
+                - esm-apps
               registries:
                 - docker.io
         """
@@ -231,10 +252,10 @@ def test_pydantic_model_loads_configuration():
                 },
             },
         },
-        "images": [{"directory": "mock-rock/1.0", "registries": ["docker.io"]}],
+        "images": [{"directory": "mock-rock/1.0", "pro_services": ["esm-apps"], "registries": ["docker.io"]}],
     }
     assert ci_config.images == [
-        ImageEntry(directory="mock-rock/1.0", registries=["docker.io"])
+        ImageEntry(directory="mock-rock/1.0", pro_services=["esm-apps"], registries=["docker.io"])
     ]
 
 
@@ -291,6 +312,9 @@ def test_valid_simple_configuration_should_pass(fake_open):
         """
         images:
             - directory: mock-rock/1.0
+              pro-services:
+                - esm-apps
+                - esm-infra
               registries:
                 - docker.io
                 - ecr
@@ -305,8 +329,9 @@ def test_valid_simple_configuration_should_pass(fake_open):
             {
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
+                "pro-services": "esm-apps,esm-infra",
                 "directory": "mock-rock/1.0",
-                "artifact-name": "mock-rock-1.0",
+                "artifact-name": "mock-rock-1.0_pro",
             },
         ]
     }
@@ -317,7 +342,8 @@ def test_valid_simple_configuration_should_pass(fake_open):
             {
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
-                "artifact-name": "mock-rock-1.0",
+                "artifact-name": "mock-rock-1.0_pro",
+                "pro-enabled": True,
                 "registry-uri": "docker.io/ubuntu",
                 "registry-auth-method": "basic",
                 "registry-auth-username": "DOCKER_IO_USERNAME",
@@ -326,7 +352,8 @@ def test_valid_simple_configuration_should_pass(fake_open):
             {
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
-                "artifact-name": "mock-rock-1.0",
+                "artifact-name": "mock-rock-1.0_pro",
+                "pro-enabled": True,
                 "registry-uri": "public.ecr.aws/ubuntu",
                 "registry-auth-method": "ecr",
                 "registry-auth-region": "us-east-1",
@@ -336,7 +363,8 @@ def test_valid_simple_configuration_should_pass(fake_open):
             {
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
-                "artifact-name": "mock-rock-1.0",
+                "artifact-name": "mock-rock-1.0_pro",
+                "pro-enabled": True,
                 "registry-uri": "public.ecr.aws/rocksdev",
                 "registry-auth-method": "ecr-public",
                 "registry-auth-region": "us-east-1",
@@ -368,6 +396,7 @@ def test_image_without_registries_should_pass(fake_open):
             {
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
+                "pro-services": "",
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0",
             }
@@ -389,6 +418,9 @@ def test_duplicated_image_directory_should_deduplicate(fake_open):
         images:
             - directory: mock-rock/1.0
             - directory: mock-rock/1.0
+              pro-services: [ esm-apps ]
+            - directory: mock-rock/1.0
+              pro-services: [ esm-infra, fips-updates ]
         """
     )
     config_data = yaml.safe_load(sample_yaml)
@@ -399,8 +431,16 @@ def test_duplicated_image_directory_should_deduplicate(fake_open):
             {
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
+                "pro-services": "",
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0",
+            },
+            {
+                "name": "mock-rock",
+                "tag": "1.0-24.04_edge",
+                "pro-services": "esm-apps,esm-infra,fips-updates",
+                "directory": "mock-rock/1.0",
+                "artifact-name": "mock-rock-1.0_pro",
             }
         ]
     }
@@ -423,6 +463,7 @@ def test_image_with_duplicated_registries_should_deduplicate(fake_open):
                 - ecr
                 - ecr
             - directory: mock-rock/1.0
+              pro-services: [esm-apps]
               registries:
                 - acr
 """
@@ -435,8 +476,16 @@ def test_image_with_duplicated_registries_should_deduplicate(fake_open):
             {
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
+                "pro-services": "",
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0",
+            },
+            {
+                "name": "mock-rock",
+                "tag": "1.0-24.04_edge",
+                "pro-services": "esm-apps",
+                "directory": "mock-rock/1.0",
+                "artifact-name": "mock-rock-1.0_pro",
             }
         ]
     }
@@ -448,14 +497,7 @@ def test_image_with_duplicated_registries_should_deduplicate(fake_open):
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "artifact-name": "mock-rock-1.0",
-                "registry-uri": "myregistry.azurecr.io/ubuntu",
-                "registry-auth-method": "bearer",
-                "registry-auth-token": "ACR_PASSWORD",
-            },
-            {
-                "name": "mock-rock",
-                "tag": "1.0-24.04_edge",
-                "artifact-name": "mock-rock-1.0",
+                "pro-enabled": False,
                 "registry-uri": "docker.io/ubuntu",
                 "registry-auth-method": "basic",
                 "registry-auth-username": "DOCKER_IO_USERNAME",
@@ -465,11 +507,21 @@ def test_image_with_duplicated_registries_should_deduplicate(fake_open):
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "artifact-name": "mock-rock-1.0",
+                "pro-enabled": False,
                 "registry-uri": "public.ecr.aws/ubuntu",
                 "registry-auth-method": "ecr",
                 "registry-auth-region": "us-east-1",
                 "registry-auth-username": "ECR_USERNAME",
                 "registry-auth-password": "ECR_PASSWORD",
+            },
+            {
+                "name": "mock-rock",
+                "tag": "1.0-24.04_edge",
+                "artifact-name": "mock-rock-1.0_pro",
+                "pro-enabled": True,
+                "registry-uri": "myregistry.azurecr.io/ubuntu",
+                "registry-auth-method": "bearer",
+                "registry-auth-token": "ACR_PASSWORD",
             },
         ]
     }
@@ -510,12 +562,14 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open):
                 "tag": "1.0-24.04_edge",
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0",
+                "pro-services": "",
             },
             {
                 "name": "another-rock",
                 "tag": "2.0-24.04_edge",
                 "directory": "another-rock/2.0",
                 "artifact-name": "another-rock-2.0",
+                "pro-services": "",
             },
         ]
     }
@@ -552,12 +606,14 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_ope
                 "tag": "1.0-24.04_edge",
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0",
+                "pro-services": ""
             },
             {
                 "name": "another-rock",
                 "tag": "2.0-24.04_edge",
                 "directory": "another-rock/2.0",
                 "artifact-name": "another-rock-2.0",
+                "pro-services": ""
             },
         ]
     }
@@ -569,6 +625,7 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_ope
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "artifact-name": "mock-rock-1.0",
+                "pro-enabled": False,
                 "registry-uri": "docker.io/ubuntu",
                 "registry-auth-method": "basic",
                 "registry-auth-username": "DOCKER_IO_USERNAME",
@@ -578,6 +635,7 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_ope
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "artifact-name": "mock-rock-1.0",
+                "pro-enabled": False,
                 "registry-uri": "public.ecr.aws/ubuntu",
                 "registry-auth-method": "ecr",
                 "registry-auth-region": "us-east-1",
@@ -587,6 +645,7 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_ope
             {
                 "name": "another-rock",
                 "tag": "2.0-24.04_edge",
+                "pro-enabled": False,
                 "artifact-name": "another-rock-2.0",
                 "registry-uri": "myregistry.azurecr.io/ubuntu",
                 "registry-auth-method": "bearer",
@@ -595,6 +654,7 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_ope
             {
                 "name": "another-rock",
                 "tag": "2.0-24.04_edge",
+                "pro-enabled": False,
                 "artifact-name": "another-rock-2.0",
                 "registry-uri": "docker.io/ubuntu",
                 "registry-auth-method": "basic",
@@ -604,6 +664,7 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_ope
             {
                 "name": "another-rock",
                 "tag": "2.0-24.04_edge",
+                "pro-enabled": False,
                 "artifact-name": "another-rock-2.0",
                 "registry-uri": "public.ecr.aws/ubuntu",
                 "registry-auth-method": "ecr",
