@@ -198,7 +198,7 @@ class CIConfig(BaseModel):
         return dir.replace("/", "-")
 
     @staticmethod
-    def image_name_and_tag(repo_root: str, image_directory: str) -> tuple[str, str]:
+    def image_name_and_tag(image_directory: str) -> tuple[str, str]:
         """Read the rockcraft.yaml in the given directory to get the image name and tag.
 
         Args:
@@ -213,7 +213,7 @@ class CIConfig(BaseModel):
         # Pattern to match base version id like '22.04', '20.04', or 'devel'
         base_version_id_pattern = r"(\d{2}(\.|@)\d{2}|devel)$"
         with open(
-            os.path.join(repo_root, image_directory, "rockcraft.yaml"),
+            os.path.join(image_directory, "rockcraft.yaml"),
             "r",
             encoding="utf-8",
         ) as f:
@@ -238,7 +238,7 @@ class CIConfig(BaseModel):
             tag = f"{version}-{base}_{channel}"
         return name, tag
 
-    def build_matrix(self, repo_root: str = "") -> dict:
+    def build_matrix(self) -> dict:
         """Generate the build matrix for GitHub Actions.
 
         Returns:
@@ -254,7 +254,7 @@ class CIConfig(BaseModel):
 
         # Build matrix entries
         for directory, services in image_pro_services.items():
-            name, tag = self.image_name_and_tag(repo_root, directory)
+            name, tag = self.image_name_and_tag(directory)
             artifact_base = self.artifact_name(directory)
 
             is_non_pro = "non-pro" in services
@@ -284,7 +284,7 @@ class CIConfig(BaseModel):
 
         return matrix
 
-    def upload_matrix(self, repo_root: str = "") -> dict:
+    def upload_matrix(self) -> dict:
         """Generate the upload matrix for GitHub Actions.
 
         Returns:
@@ -305,7 +305,7 @@ class CIConfig(BaseModel):
             if not cfg["registries"] and not cfg["pro_registries"]:
                 continue
 
-            name, tag = self.image_name_and_tag(repo_root, image_dir)
+            name, tag = self.image_name_and_tag(image_dir)
             base_artifact = self.artifact_name(image_dir)
 
             for is_pro in (False, True):
@@ -352,6 +352,8 @@ def main():
     with open(args.config_path, "r", encoding="utf-8") as f:
         config_data = yaml.safe_load(f)
 
+    os.chdir(args.repo_root)
+
     ci_config = CIConfig(**config_data)
 
     # Writes to GitHub outputs
@@ -367,10 +369,10 @@ def main():
             f"ghcr-cve-scan={json.dumps(ci_config.ghcr.upload, indent=indent)}\n"  # pylint: disable=no-member
         )
         gh_out.write(
-            f"build-matrix={json.dumps(ci_config.build_matrix(args.repo_root), indent=indent)}\n"
+            f"build-matrix={json.dumps(ci_config.build_matrix(), indent=indent)}\n"
         )
         gh_out.write(
-            f"upload-matrix={json.dumps(ci_config.upload_matrix(args.repo_root), indent=indent)}\n"
+            f"upload-matrix={json.dumps(ci_config.upload_matrix(), indent=indent)}\n"
         )
 
 
