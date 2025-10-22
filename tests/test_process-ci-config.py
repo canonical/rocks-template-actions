@@ -252,10 +252,20 @@ def test_pydantic_model_loads_configuration():
                 },
             },
         },
-        "images": [{"directory": "mock-rock/1.0", "pro_services": ["esm-apps"], "registries": ["docker.io"]}],
+        "images": [
+            {
+                "directory": "mock-rock/1.0",
+                "pro_services": ["esm-apps"],
+                "registries": ["docker.io"],
+            }
+        ],
     }
     assert ci_config.images == [
-        ImageEntry(directory="mock-rock/1.0", pro_services=["esm-apps"], registries=["docker.io"])
+        ImageEntry(
+            directory="mock-rock/1.0",
+            pro_services=["esm-apps"],
+            registries=["docker.io"],
+        )
     ]
 
 
@@ -441,7 +451,7 @@ def test_duplicated_image_directory_should_deduplicate(fake_open):
                 "pro-services": "esm-apps,esm-infra,fips-updates",
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0_pro",
-            }
+            },
         ]
     }
     assert build_matrix == expected_build_matrix
@@ -486,7 +496,7 @@ def test_image_with_duplicated_registries_should_deduplicate(fake_open):
                 "pro-services": "esm-apps",
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0_pro",
-            }
+            },
         ]
     }
     assert build_matrix == expected_build_matrix
@@ -606,14 +616,14 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_ope
                 "tag": "1.0-24.04_edge",
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0",
-                "pro-services": ""
+                "pro-services": "",
             },
             {
                 "name": "another-rock",
                 "tag": "2.0-24.04_edge",
                 "directory": "another-rock/2.0",
                 "artifact-name": "another-rock-2.0",
-                "pro-services": ""
+                "pro-services": "",
             },
         ]
     }

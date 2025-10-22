@@ -12,7 +12,8 @@ from pydantic import BaseModel, Field
 
 from .auth import AUTH_MODELS, AuthType
 
-UBUNTU_PRO_SERVICES = [ "esm-apps", "esm-infra", "fips-updates", "fips", "fips-preview" ]
+UBUNTU_PRO_SERVICES = ["esm-apps", "esm-infra", "fips-updates", "fips", "fips-preview"]
+
 
 class GHCRConfig(BaseModel):
     upload: bool = Field(..., description="Flag to indicate if upload is enabled")
@@ -102,7 +103,7 @@ class ImageEntry(BaseModel):
     pro_services: Optional[list[str]] = Field(
         description="List of Ubuntu Pro services to build the rock with",
         default_factory=list,
-        alias="pro-services"
+        alias="pro-services",
     )
 
     registries: Optional[list[str]] = Field(
@@ -114,11 +115,14 @@ class ImageEntry(BaseModel):
 
     @pydantic.field_validator("pro_services", mode="before")
     def _check_pro_services(cls, v):
-        invalid_services = [service for service in v if service not in UBUNTU_PRO_SERVICES]
+        invalid_services = [
+            service for service in v if service not in UBUNTU_PRO_SERVICES
+        ]
         if invalid_services:
             # Only raise the first invalid one, as per your message
             raise ValueError(f"Invalid Ubuntu Pro service '{invalid_services[0]}'")
         return v
+
 
 class CIConfig(BaseModel):
     version: int = Field(..., description="Version of the CI configuration")
@@ -257,22 +261,26 @@ class CIConfig(BaseModel):
             real_services = services - {"non-pro"}
 
             if is_non_pro:
-                matrix["include"].append({
-                    "name": name,
-                    "tag": tag,
-                    "directory": directory,
-                    "pro-services": "",
-                    "artifact-name": artifact_base,
-                })
+                matrix["include"].append(
+                    {
+                        "name": name,
+                        "tag": tag,
+                        "directory": directory,
+                        "pro-services": "",
+                        "artifact-name": artifact_base,
+                    }
+                )
 
             if real_services:
-                matrix["include"].append({
-                    "name": name,
-                    "tag": tag,
-                    "directory": directory,
-                    "pro-services": ",".join(sorted(real_services)),
-                    "artifact-name": f"{artifact_base}_pro",
-                })
+                matrix["include"].append(
+                    {
+                        "name": name,
+                        "tag": tag,
+                        "directory": directory,
+                        "pro-services": ",".join(sorted(real_services)),
+                        "artifact-name": f"{artifact_base}_pro",
+                    }
+                )
 
         return matrix
 
@@ -283,7 +291,9 @@ class CIConfig(BaseModel):
             dict: Upload matrix
         """
         matrix = {"include": []}
-        image_publish_cfg = defaultdict(lambda: {"registries": set(), "pro_registries": set()})
+        image_publish_cfg = defaultdict(
+            lambda: {"registries": set(), "pro_registries": set()}
+        )
 
         # Group registries by image directory and pro status
         for image in self.images:  # pylint: disable=not-an-iterable
@@ -301,17 +311,23 @@ class CIConfig(BaseModel):
             for is_pro in (False, True):
                 key = "pro_registries" if is_pro else "registries"
                 for registry_name in sorted(cfg[key]):
-                    registry = self.registries[registry_name]  # pylint: disable=unsubscriptable-object
+                    registry = self.registries[
+                        registry_name
+                    ]  # pylint: disable=unsubscriptable-object
                     artifact_name = f"{base_artifact}_pro" if is_pro else base_artifact
 
-                    matrix["include"].append({
-                        "name": name,
-                        "tag": tag,
-                        "artifact-name": artifact_name,
-                        "pro-enabled": is_pro,
-                        "registry-uri": registry.uri,
-                        **registry.auth.model_dump(by_alias=True),  # pylint: disable=no-member
-                    })
+                    matrix["include"].append(
+                        {
+                            "name": name,
+                            "tag": tag,
+                            "artifact-name": artifact_name,
+                            "pro-enabled": is_pro,
+                            "registry-uri": registry.uri,
+                            **registry.auth.model_dump(
+                                by_alias=True
+                            ),  # pylint: disable=no-member
+                        }
+                    )
 
         return matrix
 
