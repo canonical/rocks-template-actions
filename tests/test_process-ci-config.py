@@ -106,6 +106,19 @@ def fake_open(monkeypatch):
     monkeypatch.setattr("builtins.open", fake_file_open)
 
 
+@pytest.fixture
+def fake_exists(monkeypatch):
+    def fake_os_path_exists(path):
+        if "mock-rock/1.0/spread.yaml" in path:
+            return True
+        elif "another-rock/2.0/spread.yaml" in path:
+            return False
+        else:
+            return False  # Default to file not existing
+
+    monkeypatch.setattr("os.path.exists", fake_os_path_exists)
+
+
 def test_image_name_and_tag_pass(fake_open):
     name, tag = CIConfig.image_name_and_tag("mock-rock/1.0")
     assert name == "mock-rock"
@@ -317,7 +330,7 @@ def test_empty_images_should_pass():
     assert build_matrix == {"include": []}
 
 
-def test_valid_simple_configuration_should_pass(fake_open):
+def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
     sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
         """
         images:
@@ -342,6 +355,7 @@ def test_valid_simple_configuration_should_pass(fake_open):
                 "pro-services": "esm-apps,esm-infra",
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0_pro",
+                "run-tests": True,
             },
         ]
     }
@@ -386,7 +400,7 @@ def test_valid_simple_configuration_should_pass(fake_open):
     assert upload_matrix == expected_upload_matrix
 
 
-def test_image_without_registries_should_pass(fake_open):
+def test_image_without_registries_should_pass(fake_open, fake_exists):
     sample_yaml = dedent(
         """\
         version: 1
@@ -409,6 +423,7 @@ def test_image_without_registries_should_pass(fake_open):
                 "pro-services": "",
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0",
+                "run-tests": True,
             }
         ]
     }
@@ -417,7 +432,7 @@ def test_image_without_registries_should_pass(fake_open):
     assert upload_matrix == {"include": []}
 
 
-def test_duplicated_image_directory_should_deduplicate(fake_open):
+def test_duplicated_image_directory_should_deduplicate(fake_open, fake_exists):
     sample_yaml = dedent(
         """\
         version: 1
@@ -444,6 +459,7 @@ def test_duplicated_image_directory_should_deduplicate(fake_open):
                 "pro-services": "",
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0",
+                "run-tests": True,
             },
             {
                 "name": "mock-rock",
@@ -451,6 +467,7 @@ def test_duplicated_image_directory_should_deduplicate(fake_open):
                 "pro-services": "esm-apps,esm-infra,fips-updates",
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0_pro",
+                "run-tests": True,
             },
         ]
     }
@@ -459,7 +476,7 @@ def test_duplicated_image_directory_should_deduplicate(fake_open):
     assert upload_matrix == {"include": []}
 
 
-def test_image_with_duplicated_registries_should_deduplicate(fake_open):
+def test_image_with_duplicated_registries_should_deduplicate(fake_open, fake_exists):
     sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
         """\
         images:
@@ -489,6 +506,7 @@ def test_image_with_duplicated_registries_should_deduplicate(fake_open):
                 "pro-services": "",
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0",
+                "run-tests": True,
             },
             {
                 "name": "mock-rock",
@@ -496,6 +514,7 @@ def test_image_with_duplicated_registries_should_deduplicate(fake_open):
                 "pro-services": "esm-apps",
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0_pro",
+                "run-tests": True,
             },
         ]
     }
@@ -546,7 +565,7 @@ def fake_glob(monkeypatch):
     monkeypatch.setattr("glob.glob", fake_glob)
 
 
-def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open):
+def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open, fake_exists):
     sample_yaml = dedent(
         """\
         version: 1
@@ -573,6 +592,7 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open):
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0",
                 "pro-services": "",
+                "run-tests": True,
             },
             {
                 "name": "another-rock",
@@ -580,6 +600,7 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open):
                 "directory": "another-rock/2.0",
                 "artifact-name": "another-rock-2.0",
                 "pro-services": "",
+                "run-tests": False,
             },
         ]
     }
@@ -588,7 +609,9 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open):
     assert upload_matrix == {"include": []}
 
 
-def test_multiple_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open):
+def test_multiple_images_wildcard_should_glob_rockcraft_yaml(
+    fake_glob, fake_open, fake_exists
+):
     sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
         """
         images:
@@ -617,6 +640,7 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_ope
                 "directory": "mock-rock/1.0",
                 "artifact-name": "mock-rock-1.0",
                 "pro-services": "",
+                "run-tests": True,
             },
             {
                 "name": "another-rock",
@@ -624,6 +648,7 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_ope
                 "directory": "another-rock/2.0",
                 "artifact-name": "another-rock-2.0",
                 "pro-services": "",
+                "run-tests": False,
             },
         ]
     }

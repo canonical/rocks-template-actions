@@ -256,6 +256,7 @@ class CIConfig(BaseModel):
         for directory, services in image_pro_services.items():
             name, tag = self.image_name_and_tag(directory)
             artifact_base = self.artifact_name(directory)
+            run_tests = os.path.exists(os.path.join(directory, "spread.yaml"))
 
             is_non_pro = "non-pro" in services
             real_services = services - {"non-pro"}
@@ -268,6 +269,7 @@ class CIConfig(BaseModel):
                         "directory": directory,
                         "pro-services": "",
                         "artifact-name": artifact_base,
+                        "run-tests": run_tests,
                     }
                 )
 
@@ -279,6 +281,7 @@ class CIConfig(BaseModel):
                         "directory": directory,
                         "pro-services": ",".join(sorted(real_services)),
                         "artifact-name": f"{artifact_base}_pro",
+                        "run-tests": run_tests,
                     }
                 )
 
