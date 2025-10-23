@@ -419,7 +419,7 @@ def test_conflicting_artifact_names_should_fail(fake_open, fake_exists):
     with pytest.raises(ValueError) as exc_info:
         ci_config.build_matrix()
     assert (
-        "Artifact generated from 'another-rock/2.0-esm-apps' and artifact generated from 'another-rock/2.0' have the same name."
+        "Artifact generated from 'another-rock/2.0-esm-apps' and 'another-rock/2.0' have conflicting artifact name 'another-rock-2.0-esm-apps'."
         in str(exc_info.value)
     )
 

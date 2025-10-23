@@ -270,7 +270,7 @@ class CIConfig(BaseModel):
             artifact_name = f"{artifact_base}{artifact_suffix}"
             if artifact_name in added_artifacts:
                 raise ValueError(
-                    f"Artifact generated from '{image.directory}' and artifact generated from '{added_artifacts[artifact_name]}' have the same name."
+                    f"Artifact generated from '{image.directory}' and '{added_artifacts[artifact_name]}' have conflicting artifact name '{artifact_name}'."
                 )
             added_artifacts[artifact_name] = image.directory
 
