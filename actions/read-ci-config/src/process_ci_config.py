@@ -12,7 +12,15 @@ from pydantic import BaseModel, Field
 
 from .auth import AUTH_MODELS, AuthType
 
-UBUNTU_PRO_SERVICES = ["esm-apps", "esm-infra", "fips-updates", "fips", "fips-preview"]
+UBUNTU_PRO_SERVICES = [
+    "esm-apps",
+    "esm-infra",
+    "fips-updates",
+    "fips",
+    "fips-preview",
+    "ros",
+    "ros-updates",
+]
 
 
 class GHCRConfig(BaseModel):
