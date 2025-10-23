@@ -456,7 +456,9 @@ def test_image_without_registries_should_pass(fake_open, fake_exists):
     assert upload_matrix == {"include": []}
 
 
-def test_duplicated_image_directory_should_deduplicate_non_pro(fake_open, fake_exists):
+def test_duplicated_image_directory_and_pro_services_should_deduplicate(
+    fake_open, fake_exists
+):
     sample_yaml = dedent(
         """\
         version: 1
@@ -469,6 +471,8 @@ def test_duplicated_image_directory_should_deduplicate_non_pro(fake_open, fake_e
             - directory: mock-rock/1.0
             - directory: mock-rock/1.0
               pro-services: [ esm-apps ]
+            - directory: mock-rock/1.0
+              pro-services: [ fips-updates, esm-infra ]
             - directory: mock-rock/1.0
               pro-services: [ fips-updates, esm-infra ]
         """
@@ -509,7 +513,7 @@ def test_duplicated_image_directory_should_deduplicate_non_pro(fake_open, fake_e
     assert upload_matrix == {"include": []}
 
 
-def test_image_with_duplicated_registries_should_deduplicate(fake_open, fake_exists):
+def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists):
     sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
         """\
         images:
@@ -524,6 +528,11 @@ def test_image_with_duplicated_registries_should_deduplicate(fake_open, fake_exi
                 - ecr
             - directory: mock-rock/1.0
               pro-services: [esm-apps]
+              registries:
+                - acr
+                - acr
+            - directory: mock-rock/1.0
+              pro-services: [esm-apps, esm-apps]
               registries:
                 - acr
             - directory: mock-rock/1.0
