@@ -94,6 +94,8 @@ def fake_open(monkeypatch):
             return StringIO(ROCKCRAFT_YAML_MOCK_ROCK_1_0)
         elif "another-rock/2.0/rockcraft.yaml" in file:
             return StringIO(ROCKCRAFT_YAML_ANOTHER_ROCK_2_0)
+        elif "another-rock/2.0-esm-apps/rockcraft.yaml" in file:
+            return StringIO(ROCKCRAFT_YAML_ANOTHER_ROCK_2_0)
         elif "latest-rock/latest/rockcraft.yaml" in file:
             return StringIO(ROCKCRAFT_YAML_VERSION_LATEST)
         elif "invalid-rock/1.0/rockcraft.yaml" in file:
@@ -342,7 +344,7 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
                 - docker.io
                 - ecr
                 - ecr-public
-"""
+        """
     )
     config_data = yaml.safe_load(sample_yaml)
     ci_config = CIConfig(**config_data)
@@ -398,6 +400,28 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
         ]
     }
     assert sorted(upload_matrix) == sorted(expected_upload_matrix)
+
+
+def test_conflicting_artifact_names_should_fail(fake_open, fake_exists):
+    sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
+        """
+        images:
+            - directory: another-rock/2.0
+              pro-services:
+                - esm-apps
+            - directory: another-rock/2.0-esm-apps
+        """
+    )
+
+    config_data = yaml.safe_load(sample_yaml)
+    ci_config = CIConfig(**config_data)
+
+    with pytest.raises(ValueError) as exc_info:
+        ci_config.build_matrix()
+    assert (
+        "Artifact generated from 'another-rock/2.0-esm-apps' and artifact generated from 'another-rock/2.0' have the same name."
+        in str(exc_info.value)
+    )
 
 
 def test_image_without_registries_should_pass(fake_open, fake_exists):

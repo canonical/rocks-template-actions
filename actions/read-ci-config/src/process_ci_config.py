@@ -252,6 +252,7 @@ class CIConfig(BaseModel):
             dict: Build matrix
         """
         matrix = {"include": []}
+        added_artifacts = defaultdict(str)
         added_images = set()
 
         for image in self.images:  # pylint: disable=not-an-iterable
@@ -266,13 +267,20 @@ class CIConfig(BaseModel):
             run_tests = os.path.exists(os.path.join(image.directory, "spread.yaml"))
             artifact_suffix = f"-{'-'.join(pro_services)}" if pro_services else ""
 
+            artifact_name = f"{artifact_base}{artifact_suffix}"
+            if artifact_name in added_artifacts:
+                raise ValueError(
+                    f"Artifact generated from '{image.directory}' and artifact generated from '{added_artifacts[artifact_name]}' have the same name."
+                )
+            added_artifacts[artifact_name] = image.directory
+
             matrix["include"].append(
                 {
                     "name": name,
                     "tag": tag,
                     "directory": image.directory,
                     "pro-services": ",".join(pro_services),
-                    "artifact-name": f"{artifact_base}{artifact_suffix}",
+                    "artifact-name": artifact_name,
                     "run-tests": run_tests,
                 }
             )
@@ -296,7 +304,7 @@ class CIConfig(BaseModel):
         for image_tuple, registries in image_publish_cfg.items():
             if not registries:
                 continue
-            
+
             image_dir, image_pro_srvs = image_tuple
             name, tag = self.image_name_and_tag(image_dir)
             base_artifact = self.artifact_name(image_dir)
