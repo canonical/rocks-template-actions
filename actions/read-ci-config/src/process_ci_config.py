@@ -252,46 +252,30 @@ class CIConfig(BaseModel):
             dict: Build matrix
         """
         matrix = {"include": []}
-        image_pro_services = defaultdict(set)
+        added_images = set()
 
-        # Group pro services per image directory
         for image in self.images:  # pylint: disable=not-an-iterable
-            services = image.pro_services or ["non-pro"]
-            image_pro_services[image.directory].update(services)
+            key = (image.directory, frozenset(image.pro_services))
+            if key in added_images:
+                continue
+            added_images.add(key)
 
-        # Build matrix entries
-        for directory, services in image_pro_services.items():
-            name, tag = self.image_name_and_tag(directory)
-            artifact_base = self.artifact_name(directory)
-            run_tests = os.path.exists(os.path.join(directory, "spread.yaml"))
+            pro_services = sorted(image.pro_services)
+            name, tag = self.image_name_and_tag(image.directory)
+            artifact_base = self.artifact_name(image.directory)
+            run_tests = os.path.exists(os.path.join(image.directory, "spread.yaml"))
+            artifact_suffix = f"-{'-'.join(pro_services)}" if pro_services else ""
 
-            is_non_pro = "non-pro" in services
-            real_services = services - {"non-pro"}
-
-            if is_non_pro:
-                matrix["include"].append(
-                    {
-                        "name": name,
-                        "tag": tag,
-                        "directory": directory,
-                        "pro-services": "",
-                        "artifact-name": artifact_base,
-                        "run-tests": run_tests,
-                    }
-                )
-
-            if real_services:
-                matrix["include"].append(
-                    {
-                        "name": name,
-                        "tag": tag,
-                        "directory": directory,
-                        "pro-services": ",".join(sorted(real_services)),
-                        "artifact-name": f"{artifact_base}_pro",
-                        "run-tests": run_tests,
-                    }
-                )
-
+            matrix["include"].append(
+                {
+                    "name": name,
+                    "tag": tag,
+                    "directory": image.directory,
+                    "pro-services": ",".join(pro_services),
+                    "artifact-name": f"{artifact_base}{artifact_suffix}",
+                    "run-tests": run_tests,
+                }
+            )
         return matrix
 
     def upload_matrix(self) -> dict:
@@ -301,43 +285,40 @@ class CIConfig(BaseModel):
             dict: Upload matrix
         """
         matrix = {"include": []}
-        image_publish_cfg = defaultdict(
-            lambda: {"registries": set(), "pro_registries": set()}
-        )
+        image_publish_cfg = defaultdict(set)
 
         # Group registries by image directory and pro status
         for image in self.images:  # pylint: disable=not-an-iterable
-            key = "pro_registries" if image.pro_services else "registries"
-            image_publish_cfg[image.directory][key].update(image.registries)
+            key = (image.directory, frozenset(image.pro_services))
+            image_publish_cfg[key].update(image.registries)
 
         # Matrix include entries
-        for image_dir, cfg in image_publish_cfg.items():
-            if not cfg["registries"] and not cfg["pro_registries"]:
+        for image_tuple, registries in image_publish_cfg.items():
+            if not registries:
                 continue
-
+            
+            image_dir, image_pro_srvs = image_tuple
             name, tag = self.image_name_and_tag(image_dir)
             base_artifact = self.artifact_name(image_dir)
+            artifact_suffix = f"-{'-'.join(image_pro_srvs)}" if image_pro_srvs else ""
 
-            for is_pro in (False, True):
-                key = "pro_registries" if is_pro else "registries"
-                for registry_name in sorted(cfg[key]):
-                    registry = self.registries[
-                        registry_name
-                    ]  # pylint: disable=unsubscriptable-object
-                    artifact_name = f"{base_artifact}_pro" if is_pro else base_artifact
+            for registry_name in sorted(registries):
+                registry = self.registries[
+                    registry_name
+                ]  # pylint: disable=unsubscriptable-object
 
-                    matrix["include"].append(
-                        {
-                            "name": name,
-                            "tag": tag,
-                            "artifact-name": artifact_name,
-                            "pro-enabled": is_pro,
-                            "registry-uri": registry.uri,
-                            **registry.auth.model_dump(
-                                by_alias=True
-                            ),  # pylint: disable=no-member
-                        }
-                    )
+                matrix["include"].append(
+                    {
+                        "name": name,
+                        "tag": tag,
+                        "artifact-name": f"{base_artifact}{artifact_suffix}",
+                        "pro-enabled": len(image_pro_srvs) > 0,
+                        "registry-uri": registry.uri,
+                        **registry.auth.model_dump(
+                            by_alias=True
+                        ),  # pylint: disable=no-member
+                    }
+                )
 
         return matrix
 

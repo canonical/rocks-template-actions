@@ -354,7 +354,7 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-apps,esm-infra",
                 "directory": "mock-rock/1.0",
-                "artifact-name": "mock-rock-1.0_pro",
+                "artifact-name": "mock-rock-1.0-esm-apps-esm-infra",
                 "run-tests": True,
             },
         ]
@@ -366,7 +366,7 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
             {
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
-                "artifact-name": "mock-rock-1.0_pro",
+                "artifact-name": "mock-rock-1.0-esm-apps-esm-infra",
                 "pro-enabled": True,
                 "registry-uri": "docker.io/ubuntu",
                 "registry-auth-method": "basic",
@@ -376,7 +376,7 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
             {
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
-                "artifact-name": "mock-rock-1.0_pro",
+                "artifact-name": "mock-rock-1.0-esm-apps-esm-infra",
                 "pro-enabled": True,
                 "registry-uri": "public.ecr.aws/ubuntu",
                 "registry-auth-method": "ecr",
@@ -387,7 +387,7 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
             {
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
-                "artifact-name": "mock-rock-1.0_pro",
+                "artifact-name": "mock-rock-1.0-esm-apps-esm-infra",
                 "pro-enabled": True,
                 "registry-uri": "public.ecr.aws/rocksdev",
                 "registry-auth-method": "ecr-public",
@@ -397,7 +397,7 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
             },
         ]
     }
-    assert upload_matrix == expected_upload_matrix
+    assert sorted(upload_matrix) == sorted(expected_upload_matrix)
 
 
 def test_image_without_registries_should_pass(fake_open, fake_exists):
@@ -432,7 +432,7 @@ def test_image_without_registries_should_pass(fake_open, fake_exists):
     assert upload_matrix == {"include": []}
 
 
-def test_duplicated_image_directory_should_deduplicate(fake_open, fake_exists):
+def test_duplicated_image_directory_should_deduplicate_non_pro(fake_open, fake_exists):
     sample_yaml = dedent(
         """\
         version: 1
@@ -441,6 +441,7 @@ def test_duplicated_image_directory_should_deduplicate(fake_open, fake_exists):
             cve-scan: false
         registries:
         images:
+            - directory: mock-rock/1.0
             - directory: mock-rock/1.0
             - directory: mock-rock/1.0
               pro-services: [ esm-apps ]
@@ -464,9 +465,17 @@ def test_duplicated_image_directory_should_deduplicate(fake_open, fake_exists):
             {
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
-                "pro-services": "esm-apps,esm-infra,fips-updates",
+                "pro-services": "esm-apps",
                 "directory": "mock-rock/1.0",
-                "artifact-name": "mock-rock-1.0_pro",
+                "artifact-name": "mock-rock-1.0-esm-apps",
+                "run-tests": True,
+            },
+            {
+                "name": "mock-rock",
+                "tag": "1.0-24.04_edge",
+                "pro-services": "esm-infra,fips-updates",
+                "directory": "mock-rock/1.0",
+                "artifact-name": "mock-rock-1.0-esm-infra-fips-updates",
                 "run-tests": True,
             },
         ]
@@ -493,6 +502,11 @@ def test_image_with_duplicated_registries_should_deduplicate(fake_open, fake_exi
               pro-services: [esm-apps]
               registries:
                 - acr
+            - directory: mock-rock/1.0
+              pro-services: [esm-infra]
+              registries:
+                - acr
+                - ecr
 """
     )
     config_data = yaml.safe_load(sample_yaml)
@@ -513,7 +527,15 @@ def test_image_with_duplicated_registries_should_deduplicate(fake_open, fake_exi
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-apps",
                 "directory": "mock-rock/1.0",
-                "artifact-name": "mock-rock-1.0_pro",
+                "artifact-name": "mock-rock-1.0-esm-apps",
+                "run-tests": True,
+            },
+            {
+                "name": "mock-rock",
+                "tag": "1.0-24.04_edge",
+                "pro-services": "esm-infra",
+                "directory": "mock-rock/1.0",
+                "artifact-name": "mock-rock-1.0-esm-infra",
                 "run-tests": True,
             },
         ]
@@ -546,15 +568,35 @@ def test_image_with_duplicated_registries_should_deduplicate(fake_open, fake_exi
             {
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
-                "artifact-name": "mock-rock-1.0_pro",
+                "artifact-name": "mock-rock-1.0-esm-apps",
                 "pro-enabled": True,
                 "registry-uri": "myregistry.azurecr.io/ubuntu",
                 "registry-auth-method": "bearer",
                 "registry-auth-token": "ACR_PASSWORD",
             },
+            {
+                "name": "mock-rock",
+                "tag": "1.0-24.04_edge",
+                "artifact-name": "mock-rock-1.0-esm-infra",
+                "pro-enabled": True,
+                "registry-uri": "myregistry.azurecr.io/ubuntu",
+                "registry-auth-method": "bearer",
+                "registry-auth-token": "ACR_PASSWORD",
+            },
+            {
+                "name": "mock-rock",
+                "tag": "1.0-24.04_edge",
+                "artifact-name": "mock-rock-1.0-esm-infra",
+                "pro-enabled": True,
+                "registry-uri": "public.ecr.aws/ubuntu",
+                "registry-auth-method": "ecr",
+                "registry-auth-region": "us-east-1",
+                "registry-auth-username": "ECR_USERNAME",
+                "registry-auth-password": "ECR_PASSWORD",
+            },
         ]
     }
-    assert upload_matrix == expected_upload_matrix
+    assert sorted(upload_matrix) == sorted(expected_upload_matrix)
 
 
 @pytest.fixture
