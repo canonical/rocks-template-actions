@@ -308,7 +308,7 @@ class CIConfig(BaseModel):
             image_dir, image_pro_srvs = image_tuple
             name, tag = self.image_name_and_tag(image_dir)
             base_artifact = self.artifact_name(image_dir)
-            artifact_suffix = f"-{'-'.join(image_pro_srvs)}" if image_pro_srvs else ""
+            artifact_suffix = f"-{'-'.join(sorted(image_pro_srvs))}" if image_pro_srvs else ""
 
             for registry_name in sorted(registries):
                 registry = self.registries[

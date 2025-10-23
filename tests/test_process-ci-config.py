@@ -470,7 +470,7 @@ def test_duplicated_image_directory_should_deduplicate_non_pro(fake_open, fake_e
             - directory: mock-rock/1.0
               pro-services: [ esm-apps ]
             - directory: mock-rock/1.0
-              pro-services: [ esm-infra, fips-updates ]
+              pro-services: [ fips-updates, esm-infra ]
         """
     )
     config_data = yaml.safe_load(sample_yaml)
@@ -527,7 +527,7 @@ def test_image_with_duplicated_registries_should_deduplicate(fake_open, fake_exi
               registries:
                 - acr
             - directory: mock-rock/1.0
-              pro-services: [esm-infra]
+              pro-services: [fips, ros, esm-infra]
               registries:
                 - acr
                 - ecr
@@ -557,9 +557,9 @@ def test_image_with_duplicated_registries_should_deduplicate(fake_open, fake_exi
             {
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
-                "pro-services": "esm-infra",
+                "pro-services": "esm-infra,fips,ros",
                 "directory": "mock-rock/1.0",
-                "artifact-name": "mock-rock-1.0-esm-infra",
+                "artifact-name": "mock-rock-1.0-esm-infra-fips-ros",
                 "run-tests": True,
             },
         ]
@@ -601,7 +601,7 @@ def test_image_with_duplicated_registries_should_deduplicate(fake_open, fake_exi
             {
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
-                "artifact-name": "mock-rock-1.0-esm-infra",
+                "artifact-name": "mock-rock-1.0-esm-infra-fips-ros",
                 "pro-enabled": True,
                 "registry-uri": "myregistry.azurecr.io/ubuntu",
                 "registry-auth-method": "bearer",
@@ -610,7 +610,7 @@ def test_image_with_duplicated_registries_should_deduplicate(fake_open, fake_exi
             {
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
-                "artifact-name": "mock-rock-1.0-esm-infra",
+                "artifact-name": "mock-rock-1.0-esm-infra-fips-ros",
                 "pro-enabled": True,
                 "registry-uri": "public.ecr.aws/ubuntu",
                 "registry-auth-method": "ecr",
