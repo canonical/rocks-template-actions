@@ -111,14 +111,14 @@ def fake_open(monkeypatch):
 @pytest.fixture
 def fake_exists(monkeypatch):
     def fake_os_path_exists(path):
-        if "mock-rock/1.0/spread.yaml" in path:
+        if "mock-rock/1.0/spread.yaml" in str(path):
             return True
-        elif "another-rock/2.0/spread.yaml" in path:
+        elif "another-rock/2.0/spread.yaml" in str(path):
             return False
         else:
             return False  # Default to file not existing
 
-    monkeypatch.setattr("os.path.exists", fake_os_path_exists)
+    monkeypatch.setattr("pathlib.Path.exists", fake_os_path_exists)
 
 
 def test_image_name_and_tag_pass(fake_open):

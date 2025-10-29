@@ -5,6 +5,7 @@ import os
 import re
 from collections import defaultdict
 from typing import Optional, Union
+from pathlib import Path
 
 import pydantic
 import yaml
@@ -12,15 +13,17 @@ from pydantic import BaseModel, Field
 
 from .auth import AUTH_MODELS, AuthType
 
-UBUNTU_PRO_SERVICES = [
-    "esm-apps",
-    "esm-infra",
-    "fips-updates",
-    "fips",
-    "fips-preview",
-    "ros",
-    "ros-updates",
-]
+UBUNTU_PRO_SERVICES = frozenset(
+    [
+        "esm-apps",
+        "esm-infra",
+        "fips-updates",
+        "fips",
+        "fips-preview",
+        "ros",
+        "ros-updates",
+    ]
+)
 
 
 class GHCRConfig(BaseModel):
@@ -264,8 +267,8 @@ class CIConfig(BaseModel):
             pro_services = sorted(image.pro_services)
             name, tag = self.image_name_and_tag(image.directory)
             artifact_base = self.artifact_name(image.directory)
-            run_tests = os.path.exists(os.path.join(image.directory, "spread.yaml"))
-            artifact_suffix = f"-{'-'.join(pro_services)}" if pro_services else ""
+            run_tests = (Path(image.directory) / "spread.yaml").exists()
+            artifact_suffix = "-" + "-".join(pro_services) if pro_services else ""
 
             artifact_name = f"{artifact_base}{artifact_suffix}"
             if artifact_name in added_artifacts:
@@ -309,19 +312,19 @@ class CIConfig(BaseModel):
             name, tag = self.image_name_and_tag(image_dir)
             base_artifact = self.artifact_name(image_dir)
             artifact_suffix = (
-                f"-{'-'.join(sorted(image_pro_srvs))}" if image_pro_srvs else ""
+                "-" + "-".join(sorted(image_pro_srvs)) if image_pro_srvs else ""
             )
 
             for registry_name in sorted(registries):
-                registry = self.registries[
-                    registry_name
-                ]  # pylint: disable=unsubscriptable-object
+
+                # pylint: disable=unsubscriptable-object
+                registry = self.registries[registry_name]
 
                 matrix["include"].append(
                     {
                         "name": name,
                         "tag": tag,
-                        "artifact-name": f"{base_artifact}{artifact_suffix}",
+                        "artifact-name": base_artifact + artifact_suffix,
                         "pro-enabled": len(image_pro_srvs) > 0,
                         "registry-uri": registry.uri,
                         **registry.auth.model_dump(
