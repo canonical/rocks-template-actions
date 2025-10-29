@@ -255,7 +255,7 @@ class CIConfig(BaseModel):
             dict: Build matrix
         """
         matrix = {"include": []}
-        added_artifacts = defaultdict(str)
+        added_artifacts = dict()
         added_images = set()
 
         for image in self.images:  # pylint: disable=not-an-iterable
