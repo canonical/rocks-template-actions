@@ -5,12 +5,25 @@ import os
 import re
 from collections import defaultdict
 from typing import Optional, Union
+from pathlib import Path
 
 import pydantic
 import yaml
 from pydantic import BaseModel, Field
 
 from .auth import AUTH_MODELS, AuthType
+
+UBUNTU_PRO_SERVICES = frozenset(
+    [
+        "esm-apps",
+        "esm-infra",
+        "fips-updates",
+        "fips",
+        "fips-preview",
+        "ros",
+        "ros-updates",
+    ]
+)
 
 
 class GHCRConfig(BaseModel):
@@ -98,13 +111,27 @@ class ImageEntry(BaseModel):
         ..., description="Path to the directory containing the rockcraft.yaml"
     )
 
+    pro_services: Optional[list[str]] = Field(
+        description="List of Ubuntu Pro services to build the rock with",
+        default_factory=list,
+        alias="pro-services",
+    )
+
     registries: Optional[list[str]] = Field(
         description="List of registry names that match the registry config",
         default_factory=list,
     )
-    # TODO: Add support for building pro-enabled rocks
 
-    model_config = pydantic.ConfigDict(extra="forbid")
+    model_config = pydantic.ConfigDict(extra="forbid", populate_by_name=True)
+
+    @pydantic.field_validator("pro_services", mode="before")
+    def _check_pro_services(cls, v):
+        invalid_services = [
+            service for service in v if service not in UBUNTU_PRO_SERVICES
+        ]
+        if invalid_services:
+            raise ValueError(f"Invalid Ubuntu Pro service '{invalid_services[0]}'")
+        return v
 
 
 class CIConfig(BaseModel):
@@ -228,18 +255,36 @@ class CIConfig(BaseModel):
             dict: Build matrix
         """
         matrix = {"include": []}
-        added_image_dirs = set()
+        added_artifacts = dict()
+        added_images = set()
+
         for image in self.images:  # pylint: disable=not-an-iterable
-            if image.directory in added_image_dirs:
+            key = (image.directory, frozenset(image.pro_services))
+            if key in added_images:
                 continue
-            added_image_dirs.add(image.directory)
+            added_images.add(key)
+
+            pro_services = sorted(image.pro_services)
             name, tag = self.image_name_and_tag(image.directory)
+            artifact_base = self.artifact_name(image.directory)
+            run_tests = (Path(image.directory) / "spread.yaml").exists()
+            artifact_suffix = "-" + "-".join(pro_services) if pro_services else ""
+
+            artifact_name = f"{artifact_base}{artifact_suffix}"
+            if artifact_name in added_artifacts:
+                raise ValueError(
+                    f"Artifact generated from '{image.directory}' and '{added_artifacts[artifact_name]}' have conflicting artifact name '{artifact_name}'."
+                )
+            added_artifacts[artifact_name] = image.directory
+
             matrix["include"].append(
                 {
                     "name": name,
                     "tag": tag,
                     "directory": image.directory,
-                    "artifact-name": self.artifact_name(image.directory),
+                    "pro-services": ",".join(pro_services),
+                    "artifact-name": artifact_name,
+                    "run-tests": run_tests,
                 }
             )
         return matrix
@@ -251,26 +296,43 @@ class CIConfig(BaseModel):
             dict: Upload matrix
         """
         matrix = {"include": []}
-        image_registries = defaultdict(set)
+        image_publish_cfg = defaultdict(set)
+
+        # Group registries by image directory and pro status
         for image in self.images:  # pylint: disable=not-an-iterable
-            image_registries[image.directory].update(set(image.registries))
-        for image_directory, registries in image_registries.items():
+            key = (image.directory, frozenset(image.pro_services))
+            image_publish_cfg[key].update(image.registries)
+
+        # Matrix include entries
+        for image_tuple, registries in image_publish_cfg.items():
             if not registries:
                 continue
-            name, tag = self.image_name_and_tag(image_directory)
-            for r in sorted(list(registries)):
-                registry = self.registries[r]  # pylint: disable=unsubscriptable-object
+
+            image_dir, image_pro_srvs = image_tuple
+            name, tag = self.image_name_and_tag(image_dir)
+            base_artifact = self.artifact_name(image_dir)
+            artifact_suffix = (
+                "-" + "-".join(sorted(image_pro_srvs)) if image_pro_srvs else ""
+            )
+
+            for registry_name in sorted(registries):
+
+                # pylint: disable=unsubscriptable-object
+                registry = self.registries[registry_name]
+
                 matrix["include"].append(
                     {
                         "name": name,
                         "tag": tag,
-                        "artifact-name": self.artifact_name(image_directory),
+                        "artifact-name": base_artifact + artifact_suffix,
+                        "pro-enabled": len(image_pro_srvs) > 0,
                         "registry-uri": registry.uri,
                         **registry.auth.model_dump(
                             by_alias=True
                         ),  # pylint: disable=no-member
                     }
                 )
+
         return matrix
 
     def ghcr_config_json(self, **kwargs):
