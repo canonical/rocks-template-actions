@@ -196,7 +196,9 @@ class CIConfig(BaseModel):
                 for d in dirs:
                     expanded_images.append(
                         ImageEntry(
-                            directory=os.path.dirname(d), registries=image.registries
+                            directory=os.path.dirname(d),
+                            registries=image.registries,
+                            pro_services=image.pro_services
                         )
                     )
             else:

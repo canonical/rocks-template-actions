@@ -650,13 +650,15 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open, fake_e
         registries:
         images:
             - directory: "*"
+              pro-services:
+                - esm-apps
         """
     )
     config_data = yaml.safe_load(sample_yaml)
     ci_config = CIConfig(**config_data)
     assert ci_config.images == [
-        ImageEntry(directory="mock-rock/1.0"),
-        ImageEntry(directory="another-rock/2.0"),
+        ImageEntry(directory="mock-rock/1.0", pro_services=["esm-apps"]),
+        ImageEntry(directory="another-rock/2.0", pro_services=["esm-apps"]),
     ]
     build_matrix = ci_config.build_matrix()
     expected_matrix = {
@@ -665,16 +667,16 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open, fake_e
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "directory": "mock-rock/1.0",
-                "artifact-name": "mock-rock-1.0",
-                "pro-services": "",
+                "artifact-name": "mock-rock-1.0-esm-apps",
+                "pro-services": "esm-apps",
                 "run-tests": True,
             },
             {
                 "name": "another-rock",
                 "tag": "2.0-24.04_edge",
                 "directory": "another-rock/2.0",
-                "artifact-name": "another-rock-2.0",
-                "pro-services": "",
+                "artifact-name": "another-rock-2.0-esm-apps",
+                "pro-services": "esm-apps",
                 "run-tests": False,
             },
         ]
