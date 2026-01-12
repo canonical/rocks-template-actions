@@ -270,6 +270,8 @@ def test_pydantic_model_loads_configuration():
         "images": [
             {
                 "directory": "mock-rock/1.0",
+                "lfs": False,
+                "lfs_include": None,
                 "pro_services": ["esm-apps"],
                 "registries": ["docker.io"],
             }
@@ -356,6 +358,8 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-apps,esm-infra",
                 "directory": "mock-rock/1.0",
+                "lfs": False,
+                "lfs-include": '',
                 "artifact-name": "mock-rock-1.0-esm-apps-esm-infra",
                 "run-tests": True,
             },
@@ -446,6 +450,8 @@ def test_image_without_registries_should_pass(fake_open, fake_exists):
                 "tag": "1.0-24.04_edge",
                 "pro-services": "",
                 "directory": "mock-rock/1.0",
+                "lfs": False,
+                "lfs-include": '',
                 "artifact-name": "mock-rock-1.0",
                 "run-tests": True,
             }
@@ -487,6 +493,8 @@ def test_duplicated_image_directory_and_pro_services_should_deduplicate(
                 "tag": "1.0-24.04_edge",
                 "pro-services": "",
                 "directory": "mock-rock/1.0",
+                "lfs": False,
+                "lfs-include": '',
                 "artifact-name": "mock-rock-1.0",
                 "run-tests": True,
             },
@@ -495,6 +503,8 @@ def test_duplicated_image_directory_and_pro_services_should_deduplicate(
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-apps",
                 "directory": "mock-rock/1.0",
+                "lfs": False,
+                "lfs-include": '',
                 "artifact-name": "mock-rock-1.0-esm-apps",
                 "run-tests": True,
             },
@@ -503,6 +513,8 @@ def test_duplicated_image_directory_and_pro_services_should_deduplicate(
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-infra,fips-updates",
                 "directory": "mock-rock/1.0",
+                "lfs": False,
+                "lfs-include": '',
                 "artifact-name": "mock-rock-1.0-esm-infra-fips-updates",
                 "run-tests": True,
             },
@@ -552,6 +564,8 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
                 "tag": "1.0-24.04_edge",
                 "pro-services": "",
                 "directory": "mock-rock/1.0",
+                "lfs": False,
+                "lfs-include": '',
                 "artifact-name": "mock-rock-1.0",
                 "run-tests": True,
             },
@@ -560,6 +574,8 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-apps",
                 "directory": "mock-rock/1.0",
+                "lfs": False,
+                "lfs-include": '',
                 "artifact-name": "mock-rock-1.0-esm-apps",
                 "run-tests": True,
             },
@@ -568,6 +584,8 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-infra,fips,ros",
                 "directory": "mock-rock/1.0",
+                "lfs": False,
+                "lfs-include": '',
                 "artifact-name": "mock-rock-1.0-esm-infra-fips-ros",
                 "run-tests": True,
             },
@@ -657,8 +675,10 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open, fake_e
     config_data = yaml.safe_load(sample_yaml)
     ci_config = CIConfig(**config_data)
     assert ci_config.images == [
-        ImageEntry(directory="mock-rock/1.0", pro_services=["esm-apps"]),
-        ImageEntry(directory="another-rock/2.0", pro_services=["esm-apps"]),
+        ImageEntry(directory="mock-rock/1.0", lfs=False, lfs_include='',
+                   pro_services=["esm-apps"]),
+        ImageEntry(directory="another-rock/2.0", lfs=False, lfs_include='',
+                   pro_services=["esm-apps"]),
     ]
     build_matrix = ci_config.build_matrix()
     expected_matrix = {
@@ -667,6 +687,8 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open, fake_e
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "directory": "mock-rock/1.0",
+                "lfs": False,
+                "lfs-include": '',
                 "artifact-name": "mock-rock-1.0-esm-apps",
                 "pro-services": "esm-apps",
                 "run-tests": True,
@@ -675,6 +697,8 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open, fake_e
                 "name": "another-rock",
                 "tag": "2.0-24.04_edge",
                 "directory": "another-rock/2.0",
+                "lfs": False,
+                "lfs-include": '',
                 "artifact-name": "another-rock-2.0-esm-apps",
                 "pro-services": "esm-apps",
                 "run-tests": False,
@@ -715,6 +739,8 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "directory": "mock-rock/1.0",
+                "lfs": False,
+                "lfs-include": '',
                 "artifact-name": "mock-rock-1.0",
                 "pro-services": "",
                 "run-tests": True,
@@ -723,6 +749,8 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(
                 "name": "another-rock",
                 "tag": "2.0-24.04_edge",
                 "directory": "another-rock/2.0",
+                "lfs": False,
+                "lfs-include": '',
                 "artifact-name": "another-rock-2.0",
                 "pro-services": "",
                 "run-tests": False,
@@ -849,3 +877,48 @@ def test_registy_secrets_without_prefix_should_fail():
     with pytest.raises(ValidationError) as exc_info:
         _ = CIConfig(**config_data)
         assert "Credential name must start with 'secrets.'" in str(exc_info.value)
+
+
+def test_lfs_missing_should_default_to_false():
+    sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
+        """
+        images:
+            - directory: 'mock-rock/1.0'
+    """
+    )
+    config_data = yaml.safe_load(sample_yaml)
+    ci_config = CIConfig(**config_data)
+    assert ci_config.images[0].lfs is False  # pylint: disable=no-member
+
+
+def test_lfs_should_be_selectively_enabled():
+    sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
+        """
+        images:
+            - directory: 'mock-rock/1.0'
+              lfs: true
+            - directory: 'mock-rock/2.0'
+              lfs: false
+            - directory: 'mock-rock/3.0'
+              lfs: true
+    """
+    )
+    config_data = yaml.safe_load(sample_yaml)
+    ci_config = CIConfig(**config_data)
+    assert [image.lfs for image in ci_config.images] == [True, False, True]
+
+
+def test_should_be_able_to_set_lfs_include_exclude():
+    sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
+        """
+        images:
+            - directory: 'mock-rock/1.0'
+              lfs: true
+              lfs-include: "*.tar.gz"
+    """
+    )
+    config_data = yaml.safe_load(sample_yaml)
+    ci_config = CIConfig(**config_data)
+    image = ci_config.images[0]
+    assert image.lfs is True  # pylint: disable=no-member
+    assert image.lfs_include == "*.tar.gz"
