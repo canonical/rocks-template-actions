@@ -15,7 +15,7 @@ jobs:
     env:
       PYTEST_RESULT_PATH: pytest_results.xml
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v6
         with:
@@ -32,7 +32,7 @@ jobs:
 
       - name: Upload pytest Result
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ env.PYTEST_RESULT_PATH }}
           path: ${{ env.PYTEST_RESULT_PATH }}
