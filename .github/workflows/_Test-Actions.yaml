@@ -26,12 +26,10 @@ jobs:
           pip install -r tests/requirements.txt
 
       - name: Run pytest
-        continue-on-error: true
-        run: |
-          python3 -m pytest --junit-xml "${{ env.PYTEST_RESULT_PATH }}"
+        run: python3 -m pytest --junit-xml "${{ env.PYTEST_RESULT_PATH }}"
 
       - name: Upload pytest Result
-        if: ${{ !cancelled() }}
+        if: always()
         uses: actions/upload-artifact@v6
         with:
           name: ${{ env.PYTEST_RESULT_PATH }}
