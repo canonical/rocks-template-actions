@@ -11,6 +11,7 @@ sys.path.append(
     str((Path(__file__).parents[1] / "actions" / "read-ci-config").resolve())
 )
 from src.process_ci_config import CIConfig, ImageEntry
+from src.pro import Pro
 
 GENERAL_CI_YAML_WITH_REGISTRIES = """
 version: 1
@@ -171,8 +172,9 @@ def test_image_with_invalid_pro_service_should_fail():
         """\
         images:
             - directory: mock-rock/1.0
-              pro-services:
-                - invalid_service
+              pro:
+                services:
+                  - invalid_service
               registries:
                 - undefined-registry
         """
@@ -217,8 +219,11 @@ def test_pydantic_model_loads_configuration():
         """\
         images:
             - directory: mock-rock/1.0
-              pro-services:
-                - esm-apps
+              pro:
+                services:
+                  - esm-apps
+                config:
+                    artifact-passphrase: CUSTOM_KEY
               registries:
                 - docker.io
         """
@@ -272,7 +277,13 @@ def test_pydantic_model_loads_configuration():
                 "directory": "mock-rock/1.0",
                 "lfs": False,
                 "lfs_include": None,
-                "pro_services": ["esm-apps"],
+                "pro": {
+                    "services": ["esm-apps"],
+                    "config": {
+                        "token": "UBUNTU_PRO_TOKEN",
+                        "artifact_passphrase": "CUSTOM_KEY",
+                    }
+                },
                 "registries": ["docker.io"],
             }
         ],
@@ -280,7 +291,7 @@ def test_pydantic_model_loads_configuration():
     assert ci_config.images == [
         ImageEntry(
             directory="mock-rock/1.0",
-            pro_services=["esm-apps"],
+            pro=Pro(services=["esm-apps"], config={"token": "UBUNTU_PRO_TOKEN", "artifact-passphrase": "CUSTOM_KEY"}),
             registries=["docker.io"],
         )
     ]
@@ -339,9 +350,10 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
         """
         images:
             - directory: mock-rock/1.0
-              pro-services:
-                - esm-apps
-                - esm-infra
+              pro:
+                services:
+                    - esm-apps
+                    - esm-infra
               registries:
                 - docker.io
                 - ecr
@@ -357,6 +369,8 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-apps,esm-infra",
+                "pro-token": "UBUNTU_PRO_TOKEN",
+                "pro-artifact-passphrase": "GITHUB_TOKEN",
                 "directory": "mock-rock/1.0",
                 "lfs": False,
                 "lfs-include": '',
@@ -411,8 +425,9 @@ def test_conflicting_artifact_names_should_fail(fake_open, fake_exists):
         """
         images:
             - directory: another-rock/2.0
-              pro-services:
-                - esm-apps
+              pro:
+                services:
+                    - esm-apps
             - directory: another-rock/2.0-esm-apps
         """
     )
@@ -449,6 +464,8 @@ def test_image_without_registries_should_pass(fake_open, fake_exists):
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "pro-services": "",
+                "pro-token": "",
+                "pro-artifact-passphrase": "",
                 "directory": "mock-rock/1.0",
                 "lfs": False,
                 "lfs-include": '',
@@ -476,11 +493,15 @@ def test_duplicated_image_directory_and_pro_services_should_deduplicate(
             - directory: mock-rock/1.0
             - directory: mock-rock/1.0
             - directory: mock-rock/1.0
-              pro-services: [ esm-apps ]
+              pro:
+                services: [ esm-apps ]
+                config: { token: CUSTOM_TOKEN }
             - directory: mock-rock/1.0
-              pro-services: [ fips-updates, esm-infra ]
+              pro:
+                services: [ fips-updates, esm-infra ]
             - directory: mock-rock/1.0
-              pro-services: [ fips-updates, esm-infra ]
+              pro:
+                services: [ fips-updates, esm-infra ]
         """
     )
     config_data = yaml.safe_load(sample_yaml)
@@ -492,6 +513,8 @@ def test_duplicated_image_directory_and_pro_services_should_deduplicate(
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "pro-services": "",
+                "pro-token": "",
+                "pro-artifact-passphrase": "",
                 "directory": "mock-rock/1.0",
                 "lfs": False,
                 "lfs-include": '',
@@ -502,6 +525,8 @@ def test_duplicated_image_directory_and_pro_services_should_deduplicate(
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-apps",
+                "pro-token": "CUSTOM_TOKEN",
+                "pro-artifact-passphrase": "GITHUB_TOKEN",
                 "directory": "mock-rock/1.0",
                 "lfs": False,
                 "lfs-include": '',
@@ -512,6 +537,8 @@ def test_duplicated_image_directory_and_pro_services_should_deduplicate(
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-infra,fips-updates",
+                "pro-token": "UBUNTU_PRO_TOKEN",
+                "pro-artifact-passphrase": "GITHUB_TOKEN",
                 "directory": "mock-rock/1.0",
                 "lfs": False,
                 "lfs-include": '',
@@ -539,16 +566,18 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
                 - ecr
                 - ecr
             - directory: mock-rock/1.0
-              pro-services: [esm-apps]
+              pro:
+                services: [esm-apps]
+                config: { artifact-passphrase: CUSTOM_KEY }
               registries:
                 - acr
                 - acr
             - directory: mock-rock/1.0
-              pro-services: [esm-apps, esm-apps]
+              pro: { services: [esm-apps, esm-apps] }
               registries:
                 - acr
             - directory: mock-rock/1.0
-              pro-services: [fips, ros, esm-infra]
+              pro: { services: [fips, ros, esm-infra] }
               registries:
                 - acr
                 - ecr
@@ -563,6 +592,8 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "pro-services": "",
+                "pro-token": "",
+                "pro-artifact-passphrase": "",
                 "directory": "mock-rock/1.0",
                 "lfs": False,
                 "lfs-include": '',
@@ -573,6 +604,8 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-apps",
+                "pro-token": "UBUNTU_PRO_TOKEN",
+                "pro-artifact-passphrase": "CUSTOM_KEY",
                 "directory": "mock-rock/1.0",
                 "lfs": False,
                 "lfs-include": '',
@@ -583,6 +616,8 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-infra,fips,ros",
+                "pro-token": "UBUNTU_PRO_TOKEN",
+                "pro-artifact-passphrase": "GITHUB_TOKEN",
                 "directory": "mock-rock/1.0",
                 "lfs": False,
                 "lfs-include": '',
@@ -668,17 +703,17 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open, fake_e
         registries:
         images:
             - directory: "*"
-              pro-services:
-                - esm-apps
+              pro:
+                services: [esm-apps]
         """
     )
     config_data = yaml.safe_load(sample_yaml)
     ci_config = CIConfig(**config_data)
     assert ci_config.images == [
         ImageEntry(directory="mock-rock/1.0", lfs=False, lfs_include='',
-                   pro_services=["esm-apps"]),
+                   pro=Pro(services=["esm-apps"]), registries=[]),
         ImageEntry(directory="another-rock/2.0", lfs=False, lfs_include='',
-                   pro_services=["esm-apps"]),
+                   pro=Pro(services=["esm-apps"]), registries=[]),
     ]
     build_matrix = ci_config.build_matrix()
     expected_matrix = {
@@ -691,6 +726,8 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open, fake_e
                 "lfs-include": '',
                 "artifact-name": "mock-rock-1.0-esm-apps",
                 "pro-services": "esm-apps",
+                "pro-token": "UBUNTU_PRO_TOKEN",
+                "pro-artifact-passphrase": "GITHUB_TOKEN",
                 "run-tests": True,
             },
             {
@@ -701,6 +738,8 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open, fake_e
                 "lfs-include": '',
                 "artifact-name": "another-rock-2.0-esm-apps",
                 "pro-services": "esm-apps",
+                "pro-token": "UBUNTU_PRO_TOKEN",
+                "pro-artifact-passphrase": "GITHUB_TOKEN",
                 "run-tests": False,
             },
         ]
@@ -743,6 +782,8 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(
                 "lfs-include": '',
                 "artifact-name": "mock-rock-1.0",
                 "pro-services": "",
+                "pro-token": "",
+                "pro-artifact-passphrase": "",
                 "run-tests": True,
             },
             {
@@ -753,6 +794,8 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(
                 "lfs-include": '',
                 "artifact-name": "another-rock-2.0",
                 "pro-services": "",
+                "pro-token": "",
+                "pro-artifact-passphrase": "",
                 "run-tests": False,
             },
         ]
