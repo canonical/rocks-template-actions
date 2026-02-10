@@ -223,7 +223,7 @@ def test_pydantic_model_loads_configuration():
                 services:
                   - esm-apps
                 config:
-                    artifact-passphrase: CUSTOM_KEY
+                    artifact-passphrase: secrets.CUSTOM_KEY
               registries:
                 - docker.io
         """
@@ -291,7 +291,10 @@ def test_pydantic_model_loads_configuration():
     assert ci_config.images == [
         ImageEntry(
             directory="mock-rock/1.0",
-            pro=Pro(services=["esm-apps"], config={"token": "UBUNTU_PRO_TOKEN", "artifact-passphrase": "CUSTOM_KEY"}),
+            pro=Pro(
+                services=["esm-apps"],
+                config={"token": "secrets.UBUNTU_PRO_TOKEN", "artifact_passphrase": "secrets.CUSTOM_KEY"}
+            ),
             registries=["docker.io"],
         )
     ]
@@ -495,7 +498,7 @@ def test_duplicated_image_directory_and_pro_services_should_deduplicate(
             - directory: mock-rock/1.0
               pro:
                 services: [ esm-apps ]
-                config: { token: CUSTOM_TOKEN }
+                config: { token: secrets.CUSTOM_TOKEN }
             - directory: mock-rock/1.0
               pro:
                 services: [ fips-updates, esm-infra ]
@@ -568,7 +571,7 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
             - directory: mock-rock/1.0
               pro:
                 services: [esm-apps]
-                config: { artifact-passphrase: CUSTOM_KEY }
+                config: { artifact-passphrase: secrets.CUSTOM_KEY }
               registries:
                 - acr
                 - acr

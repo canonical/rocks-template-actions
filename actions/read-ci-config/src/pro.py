@@ -29,6 +29,14 @@ class ProConfig(BaseModel):
 
     model_config = pydantic.ConfigDict(extra="forbid", populate_by_name=True)
 
+    @pydantic.field_validator("token", "artifact_passphrase")
+    def _ensure_secret_format(cls, v):  # pylint: disable=no-self-argument
+        if not v or not isinstance(v, str):
+            raise ValueError("Credential name must be a non-empty string.")
+        if not v.startswith("secrets."):
+            raise ValueError("Credential name must start with 'secrets.'")
+        return v.removeprefix("secrets.")
+
 
 class Pro(BaseModel):
     services: list[str] = Field(
