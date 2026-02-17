@@ -133,6 +133,13 @@ class ImageEntry(BaseModel):
         default_factory=list,
     )
 
+    base_override: Optional[str] = Field(
+        description="Override the base image inferred from rockcraft.yaml with the specified base image."
+                    "This is particularly useful for bare images that ship their own rootfs.",
+        default=None,
+        alias="base-override",
+    )
+
     model_config = pydantic.ConfigDict(extra="forbid", populate_by_name=True)
 
     @pydantic.field_validator("pro_services", mode="before")
@@ -223,7 +230,7 @@ class CIConfig(BaseModel):
         return dir.replace("/", "-")
 
     @staticmethod
-    def image_name_and_tag(image_directory: str) -> tuple[str, str]:
+    def image_name_and_tag(image_directory: str, base_override: str) -> tuple[str, str]:
         """Read the rockcraft.yaml in the given directory to get the image name and tag.
 
         Args:
@@ -247,7 +254,9 @@ class CIConfig(BaseModel):
             version = rockcraft["version"]
             channel = "edge"
             base = rockcraft["base"]
-            if base == "bare":
+            if base == "bare" and base_override:
+                base = base_override
+            elif base == "bare":
                 base = rockcraft["build-base"]
             match = re.search(base_version_id_pattern, base)
             if not match:
@@ -280,7 +289,7 @@ class CIConfig(BaseModel):
             added_images.add(key)
 
             pro_services = sorted(image.pro_services)
-            name, tag = self.image_name_and_tag(image.directory)
+            name, tag = self.image_name_and_tag(image.directory, image.base_override or "")
             artifact_base = self.artifact_name(image.directory)
             run_tests = (Path(image.directory) / "spread.yaml").exists()
             artifact_suffix = "-" + "-".join(pro_services) if pro_services else ""
@@ -317,7 +326,7 @@ class CIConfig(BaseModel):
 
         # Group registries by image directory and pro status
         for image in self.images:  # pylint: disable=not-an-iterable
-            key = (image.directory, frozenset(image.pro_services))
+            key = (image.directory, frozenset(image.pro_services), image.base_override or "")
             image_publish_cfg[key].update(image.registries)
 
         # Matrix include entries
@@ -325,8 +334,8 @@ class CIConfig(BaseModel):
             if not registries:
                 continue
 
-            image_dir, image_pro_srvs = image_tuple
-            name, tag = self.image_name_and_tag(image_dir)
+            image_dir, image_pro_srvs, image_base_override = image_tuple
+            name, tag = self.image_name_and_tag(image_dir, image_base_override)
             base_artifact = self.artifact_name(image_dir)
             artifact_suffix = (
                 "-" + "-".join(sorted(image_pro_srvs)) if image_pro_srvs else ""

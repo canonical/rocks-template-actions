@@ -83,6 +83,11 @@ base: bare
 build-base: devel
 """
 
+ROCKCRAFT_YAML_2404_BASE = """
+name: 2404-base-rock
+version: 1.0
+base: ubuntu:24.04
+"""
 
 # mock the open function to return the content of ROCKCRAFT_YAML_MOCK_ROCK_1_0 or ROCKCRAFT_YAML_ANOTHER_ROCK_2_0
 @pytest.fixture
@@ -102,6 +107,8 @@ def fake_open(monkeypatch):
             return StringIO(ROCKCRAFT_YAML_INVALID_BASE)
         elif "devel-rock/1.0/rockcraft.yaml" in file:
             return StringIO(ROCKCRAFT_YAML_DEVEL_BASE)
+        elif "24.04-base-rock/1.0/rockcraft.yaml" in file:
+            return StringIO(ROCKCRAFT_YAML_2404_BASE)
         else:
             raise FileNotFoundError(f"No such file: {file}")
 
@@ -122,16 +129,16 @@ def fake_exists(monkeypatch):
 
 
 def test_image_name_and_tag_pass(fake_open):
-    name, tag = CIConfig.image_name_and_tag("mock-rock/1.0")
+    name, tag = CIConfig.image_name_and_tag("mock-rock/1.0", "")
     assert name == "mock-rock"
     assert tag == "1.0-24.04_edge"
-    name, tag = CIConfig.image_name_and_tag("another-rock/2.0")
+    name, tag = CIConfig.image_name_and_tag("another-rock/2.0", "")
     assert name == "another-rock"
     assert tag == "2.0-24.04_edge"
 
 
 def test_image_name_and_tag_with_latest_version_pass(fake_open, capsys):
-    name, tag = CIConfig.image_name_and_tag("latest-rock/latest")
+    name, tag = CIConfig.image_name_and_tag("latest-rock/latest", "")
     assert name == "latest-rock"
     assert tag == "latest-24.04_edge"
     captured = capsys.readouterr()
@@ -146,7 +153,7 @@ def test_image_name_and_tag_with_invalid_base_should_fail(fake_open):
         ValueError,
         match="Base 'ubuntu:noble' in 'invalid-rock/1.0/rockcraft.yaml' does not match the expected pattern.",
     ):
-        _ = CIConfig.image_name_and_tag("invalid-rock/1.0")
+        _ = CIConfig.image_name_and_tag("invalid-rock/1.0", "")
 
 
 def test_image_with_undefined_registry_should_fail():
@@ -186,15 +193,25 @@ def test_image_with_invalid_pro_service_should_fail():
 
 
 def test_image_name_and_tag_with_devel_base_pass(fake_open):
-    name, tag = CIConfig.image_name_and_tag("devel-rock/1.0")
+    name, tag = CIConfig.image_name_and_tag("devel-rock/1.0", "")
     assert name == "devel-rock"
     assert tag == "1.0-devel_edge"
 
 
 def test_image_base_with_at_symbol_should_pass(fake_open):
-    name, tag = CIConfig.image_name_and_tag("latest-rock/latest")
+    name, tag = CIConfig.image_name_and_tag("latest-rock/latest", "")
     assert name == "latest-rock"
     assert tag == "latest-24.04_edge"
+
+
+def test_image_base_override_with_bare_base(fake_open):
+    name, tag = CIConfig.image_name_and_tag("mock-rock/1.0", "22.04")
+    assert tag == "1.0-22.04_edge"
+
+
+def test_image_base_not_override_with_not_bare_base(fake_open):
+    name, tag = CIConfig.image_name_and_tag("24.04-base-rock/1.0", "22.04")
+    assert tag == "1.0-24.04_edge"
 
 
 def test_image_with_other_wildcard_should_fail():
@@ -274,6 +291,7 @@ def test_pydantic_model_loads_configuration():
                 "lfs_include": None,
                 "pro_services": ["esm-apps"],
                 "registries": ["docker.io"],
+                "base_override": None,
             }
         ],
     }
@@ -922,3 +940,37 @@ def test_should_be_able_to_set_lfs_include_exclude():
     image = ci_config.images[0]
     assert image.lfs is True  # pylint: disable=no-member
     assert image.lfs_include == "*.tar.gz"
+
+
+def test_override_base_with_bare_base_should_override_tag(fake_open):
+    sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
+        """
+        images:
+            - directory: 'mock-rock/1.0'
+              base-override: 'ubuntu:22.04'
+    """
+    )
+    config_data = yaml.safe_load(sample_yaml)
+    ci_config = CIConfig(**config_data)
+    image = ci_config.images[0]
+    assert image.base_override == "ubuntu:22.04"  # pylint: disable=no-member
+
+    build_matrix = ci_config.build_matrix()
+    assert build_matrix["include"][0]["tag"] == "1.0-22.04_edge"
+
+
+def test_override_base_with_non_bare_base_should_not_override_tag(fake_open):
+    sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
+        """
+        images:
+            - directory: '24.04-base-rock/1.0'
+              base-override: 'ubuntu:22.04'
+    """
+    )
+    config_data = yaml.safe_load(sample_yaml)
+    ci_config = CIConfig(**config_data)
+    image = ci_config.images[0]
+    assert image.base_override == "ubuntu:22.04"  # pylint: disable=no-member
+
+    build_matrix = ci_config.build_matrix()
+    assert build_matrix["include"][0]["tag"] == "1.0-24.04_edge"
