@@ -12,18 +12,7 @@ import yaml
 from pydantic import BaseModel, Field
 
 from .auth import AUTH_MODELS, AuthType
-
-UBUNTU_PRO_SERVICES = frozenset(
-    [
-        "esm-apps",
-        "esm-infra",
-        "fips-updates",
-        "fips",
-        "fips-preview",
-        "ros",
-        "ros-updates",
-    ]
-)
+from .pro import Pro
 
 
 class GHCRConfig(BaseModel):
@@ -122,10 +111,9 @@ class ImageEntry(BaseModel):
         alias="lfs-include",
     )
 
-    pro_services: Optional[list[str]] = Field(
-        description="List of Ubuntu Pro services to build the rock with",
-        default_factory=list,
-        alias="pro-services",
+    pro: Optional[Pro] = Field(
+        description="Ubuntu Pro configuration for this image",
+        default=None,
     )
 
     registries: Optional[list[str]] = Field(
@@ -134,15 +122,6 @@ class ImageEntry(BaseModel):
     )
 
     model_config = pydantic.ConfigDict(extra="forbid", populate_by_name=True)
-
-    @pydantic.field_validator("pro_services", mode="before")
-    def _check_pro_services(cls, v):
-        invalid_services = [
-            service for service in v if service not in UBUNTU_PRO_SERVICES
-        ]
-        if invalid_services:
-            raise ValueError(f"Invalid Ubuntu Pro service '{invalid_services[0]}'")
-        return v
 
 
 class CIConfig(BaseModel):
@@ -209,7 +188,7 @@ class CIConfig(BaseModel):
                         ImageEntry(
                             directory=os.path.dirname(d),
                             registries=image.registries,
-                            pro_services=image.pro_services,
+                            pro=image.pro,
                             lfs=image.lfs,
                             lfs_include=image.lfs_include or "",
                         )
@@ -274,12 +253,12 @@ class CIConfig(BaseModel):
         added_images = set()
 
         for image in self.images:  # pylint: disable=not-an-iterable
-            key = (image.directory, frozenset(image.pro_services))
+            key = (image.directory, frozenset(image.pro.services if image.pro else []))
             if key in added_images:
                 continue
             added_images.add(key)
 
-            pro_services = sorted(image.pro_services)
+            pro_services = sorted(image.pro.services) if image.pro else []
             name, tag = self.image_name_and_tag(image.directory)
             artifact_base = self.artifact_name(image.directory)
             run_tests = (Path(image.directory) / "spread.yaml").exists()
@@ -298,6 +277,8 @@ class CIConfig(BaseModel):
                     "tag": tag,
                     "directory": image.directory,
                     "pro-services": ",".join(pro_services),
+                    "pro-token": image.pro.config.token if image.pro else "",
+                    "pro-artifact-passphrase": image.pro.config.artifact_passphrase if image.pro else "",
                     "artifact-name": artifact_name,
                     "run-tests": run_tests,
                     "lfs": image.lfs,
@@ -317,7 +298,7 @@ class CIConfig(BaseModel):
 
         # Group registries by image directory and pro status
         for image in self.images:  # pylint: disable=not-an-iterable
-            key = (image.directory, frozenset(image.pro_services))
+            key = (image.directory, frozenset(image.pro.services if image.pro else []))
             image_publish_cfg[key].update(image.registries)
 
         # Matrix include entries
