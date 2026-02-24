@@ -45,7 +45,7 @@ class Pro(BaseModel):
     )
     config: Optional[ProConfig] = Field(
         description="Configuration for building the rock with Ubuntu Pro",
-        default=ProConfig()
+        default_factory=ProConfig,
     )
 
     model_config = pydantic.ConfigDict(extra="forbid")
