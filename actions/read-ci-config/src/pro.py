@@ -1,19 +1,17 @@
-from typing import Optional
+from typing import Literal, Optional
 import pydantic
 from pydantic import BaseModel, Field
 
 
-UBUNTU_PRO_SERVICES = frozenset(
-    [
-        "esm-apps",
-        "esm-infra",
-        "fips-updates",
-        "fips",
-        "fips-preview",
-        "ros",
-        "ros-updates",
-    ]
-)
+UbuntuProServiceLiteral = Literal[
+    "esm-apps",
+    "esm-infra",
+    "fips-updates",
+    "fips",
+    "fips-preview",
+    "ros",
+    "ros-updates",
+]
 
 
 class ProConfig(BaseModel):
@@ -39,7 +37,7 @@ class ProConfig(BaseModel):
 
 
 class Pro(BaseModel):
-    services: list[str] = Field(
+    services: list[UbuntuProServiceLiteral] = Field(
         description="List of Ubuntu Pro services to build the rock with",
         default_factory=list,
     )
@@ -53,7 +51,7 @@ class Pro(BaseModel):
     @pydantic.field_validator("services", mode="before")
     def _check_services(cls, v):
         invalid_services = [
-            service for service in v if service not in UBUNTU_PRO_SERVICES
+            service for service in v if service not in UbuntuProServiceLiteral.__args__
         ]
         if invalid_services:
             raise ValueError(f"Invalid Ubuntu Pro service '{invalid_services[0]}'")
