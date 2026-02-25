@@ -248,17 +248,21 @@ class CIConfig(BaseModel):
         Returns:
             dict: Build matrix
         """
-        matrix = {"include": []}
-        added_artifacts = dict()
-        added_images = set()
+        matrix: dict[str, list[dict[str, str | bool]]] = {"include": []}
+        added_artifacts: dict[str, str] = dict()
+        added_images: set[tuple[str, frozenset[str]]] = set()
 
         for image in self.images:  # pylint: disable=not-an-iterable
-            key = (image.directory, frozenset(image.pro.services if image.pro else []))
+            key: tuple[str, frozenset[str]] = (
+                image.directory,
+                frozenset(image.pro.services if image.pro else []),
+            )
+
             if key in added_images:
                 continue
             added_images.add(key)
 
-            pro_services = sorted(image.pro.services) if image.pro else []
+            pro_services: list[str] = sorted(image.pro.services) if image.pro else []
             name, tag = self.image_name_and_tag(image.directory)
             artifact_base = self.artifact_name(image.directory)
             run_tests = (Path(image.directory) / "spread.yaml").exists()
@@ -293,12 +297,15 @@ class CIConfig(BaseModel):
         Returns:
             dict: Upload matrix
         """
-        matrix = {"include": []}
-        image_publish_cfg = defaultdict(set)
+        matrix: dict[str, list[dict[str, str | bool]]] = {"include": []}
+        image_publish_cfg: defaultdict[tuple[str, frozenset[str]], set[str]] = defaultdict(set)
 
         # Group registries by image directory and pro status
         for image in self.images:  # pylint: disable=not-an-iterable
-            key = (image.directory, frozenset(image.pro.services if image.pro else []))
+            key: tuple[str, frozenset[str]] = (
+                image.directory,
+                frozenset(image.pro.services if image.pro else []),
+            )
             image_publish_cfg[key].update(image.registries)
 
         # Matrix include entries
