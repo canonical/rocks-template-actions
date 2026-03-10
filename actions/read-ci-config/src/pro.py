@@ -15,14 +15,14 @@ UbuntuProServiceLiteral = Literal[
 
 
 class ProConfig(BaseModel):
-    token: Optional[str] = Field(
+    token: str = Field(
+        ...,
         description="Ubuntu Pro token to use for building the rock",
-        default="UBUNTU_PRO_TOKEN",
     )
-    artifact_passphrase: Optional[str] = Field(
+    artifact_passphrase: str = Field(
+        ...,
         description="Passphrase to use for encrypting the Ubuntu Pro artifact",
         alias="artifact-passphrase",
-        default="GITHUB_TOKEN",
     )
 
     model_config = pydantic.ConfigDict(extra="forbid", populate_by_name=True)
@@ -38,12 +38,12 @@ class ProConfig(BaseModel):
 
 class Pro(BaseModel):
     services: list[UbuntuProServiceLiteral] = Field(
+        ...,
         description="List of Ubuntu Pro services to build the rock with",
-        default_factory=list,
     )
-    config: Optional[ProConfig] = Field(
+    config: ProConfig = Field(
+        ...,
         description="Configuration for building the rock with Ubuntu Pro",
-        default_factory=ProConfig,
     )
 
     model_config = pydantic.ConfigDict(extra="forbid")

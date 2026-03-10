@@ -223,6 +223,7 @@ def test_pydantic_model_loads_configuration():
                 services:
                   - esm-apps
                 config:
+                    token: secrets.UBUNTU_PRO_TOKEN
                     artifact-passphrase: secrets.CUSTOM_KEY
               registries:
                 - docker.io
@@ -357,6 +358,9 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
                 services:
                     - esm-apps
                     - esm-infra
+                config:
+                    token: secrets.UBUNTU_PRO_TOKEN
+                    artifact-passphrase: secrets.MY_TOKEN
               registries:
                 - docker.io
                 - ecr
@@ -373,7 +377,7 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-apps,esm-infra",
                 "pro-token": "UBUNTU_PRO_TOKEN",
-                "pro-artifact-passphrase": "GITHUB_TOKEN",
+                "pro-artifact-passphrase": "MY_TOKEN",
                 "directory": "mock-rock/1.0",
                 "lfs": False,
                 "lfs-include": '',
@@ -431,6 +435,9 @@ def test_conflicting_artifact_names_should_fail(fake_open, fake_exists):
               pro:
                 services:
                     - esm-apps
+                config:
+                    token: secrets.UBUNTU_PRO_TOKEN
+                    artifact-passphrase: secrets.MY_TOKEN
             - directory: another-rock/2.0-esm-apps
         """
     )
@@ -498,13 +505,15 @@ def test_duplicated_image_directory_and_pro_services_should_deduplicate(
             - directory: mock-rock/1.0
               pro:
                 services: [ esm-apps ]
-                config: { token: secrets.CUSTOM_TOKEN }
+                config: { token: secrets.CUSTOM_TOKEN_1, artifact-passphrase: secrets.CUSTOM_KEY_1 }
             - directory: mock-rock/1.0
               pro:
                 services: [ fips-updates, esm-infra ]
+                config: { token: secrets.CUSTOM_TOKEN_2, artifact-passphrase: secrets.CUSTOM_KEY_2 }
             - directory: mock-rock/1.0
               pro:
                 services: [ fips-updates, esm-infra ]
+                config: { token: secrets.CUSTOM_TOKEN_2, artifact-passphrase: secrets.CUSTOM_KEY_2 }
         """
     )
     config_data = yaml.safe_load(sample_yaml)
@@ -528,8 +537,8 @@ def test_duplicated_image_directory_and_pro_services_should_deduplicate(
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-apps",
-                "pro-token": "CUSTOM_TOKEN",
-                "pro-artifact-passphrase": "GITHUB_TOKEN",
+                "pro-token": "CUSTOM_TOKEN_1",
+                "pro-artifact-passphrase": "CUSTOM_KEY_1",
                 "directory": "mock-rock/1.0",
                 "lfs": False,
                 "lfs-include": '',
@@ -540,8 +549,8 @@ def test_duplicated_image_directory_and_pro_services_should_deduplicate(
                 "name": "mock-rock",
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-infra,fips-updates",
-                "pro-token": "UBUNTU_PRO_TOKEN",
-                "pro-artifact-passphrase": "GITHUB_TOKEN",
+                "pro-token": "CUSTOM_TOKEN_2",
+                "pro-artifact-passphrase": "CUSTOM_KEY_2",
                 "directory": "mock-rock/1.0",
                 "lfs": False,
                 "lfs-include": '',
@@ -571,20 +580,24 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
             - directory: mock-rock/1.0
               pro:
                 services: [esm-apps]
-                config: { artifact-passphrase: secrets.CUSTOM_KEY }
+                config: { artifact-passphrase: secrets.CUSTOM_KEY, token: secrets.UBUNTU_PRO_TOKEN }
               registries:
                 - acr
                 - acr
             - directory: mock-rock/1.0
-              pro: { services: [esm-apps, esm-apps] }
+              pro:
+                services: [esm-apps, esm-apps]
+                config: { artifact-passphrase: secrets.CUSTOM_KEY, token: secrets.UBUNTU_PRO_TOKEN }
               registries:
                 - acr
             - directory: mock-rock/1.0
-              pro: { services: [fips, ros, esm-infra] }
+              pro: 
+                services: [fips, ros, esm-infra]
+                config: { artifact-passphrase: secrets.MY_TOKEN, token: secrets.UBUNTU_PRO_TOKEN }
               registries:
                 - acr
                 - ecr
-"""
+            """
     )
     config_data = yaml.safe_load(sample_yaml)
     ci_config = CIConfig(**config_data)
@@ -620,7 +633,7 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
                 "tag": "1.0-24.04_edge",
                 "pro-services": "esm-infra,fips,ros",
                 "pro-token": "UBUNTU_PRO_TOKEN",
-                "pro-artifact-passphrase": "GITHUB_TOKEN",
+                "pro-artifact-passphrase": "MY_TOKEN",
                 "directory": "mock-rock/1.0",
                 "lfs": False,
                 "lfs-include": '',
@@ -707,16 +720,17 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open, fake_e
         images:
             - directory: "*"
               pro:
-                services: [esm-apps]
+                services: [ esm-apps ]
+                config: { token: secrets.UBUNTU_PRO_TOKEN, artifact-passphrase: secrets.MY_TOKEN }
         """
     )
     config_data = yaml.safe_load(sample_yaml)
     ci_config = CIConfig(**config_data)
     assert ci_config.images == [
         ImageEntry(directory="mock-rock/1.0", lfs=False, lfs_include='',
-                   pro=Pro(services=["esm-apps"]), registries=[]),
+                   pro=Pro(services=["esm-apps"], config={"token": "secrets.UBUNTU_PRO_TOKEN", "artifact-passphrase": "secrets.MY_TOKEN"}), registries=[]),
         ImageEntry(directory="another-rock/2.0", lfs=False, lfs_include='',
-                   pro=Pro(services=["esm-apps"]), registries=[]),
+                   pro=Pro(services=["esm-apps"], config={"token": "secrets.UBUNTU_PRO_TOKEN", "artifact-passphrase": "secrets.MY_TOKEN"}), registries=[]),
     ]
     build_matrix = ci_config.build_matrix()
     expected_matrix = {
@@ -730,7 +744,7 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open, fake_e
                 "artifact-name": "mock-rock-1.0-esm-apps",
                 "pro-services": "esm-apps",
                 "pro-token": "UBUNTU_PRO_TOKEN",
-                "pro-artifact-passphrase": "GITHUB_TOKEN",
+                "pro-artifact-passphrase": "MY_TOKEN",
                 "run-tests": True,
             },
             {
@@ -742,7 +756,7 @@ def test_images_wildcard_should_glob_rockcraft_yaml(fake_glob, fake_open, fake_e
                 "artifact-name": "another-rock-2.0-esm-apps",
                 "pro-services": "esm-apps",
                 "pro-token": "UBUNTU_PRO_TOKEN",
-                "pro-artifact-passphrase": "GITHUB_TOKEN",
+                "pro-artifact-passphrase": "MY_TOKEN",
                 "run-tests": False,
             },
         ]
