@@ -302,9 +302,10 @@ class CIConfig(BaseModel):
 
         # Group registries by image directory and pro status
         for image in self.images:  # pylint: disable=not-an-iterable
-            key: tuple[str, frozenset[str]] = (
+            key: tuple[str, frozenset[str], str] = (
                 image.directory,
                 frozenset(image.pro.services if image.pro else []),
+                image.pro.config.artifact_passphrase if image.pro else "",
             )
             image_publish_cfg[key].update(image.registries)
 
@@ -313,7 +314,7 @@ class CIConfig(BaseModel):
             if not registries:
                 continue
 
-            image_dir, image_pro_srvs = image_tuple
+            image_dir, image_pro_srvs, passphrase = image_tuple
             name, tag = self.image_name_and_tag(image_dir)
             base_artifact = self.artifact_name(image_dir)
             artifact_suffix = (
@@ -331,6 +332,7 @@ class CIConfig(BaseModel):
                         "tag": tag,
                         "artifact-name": base_artifact + artifact_suffix,
                         "pro-enabled": len(image_pro_srvs) > 0,
+                        "pro-artifact-passphrase": passphrase,
                         "registry-uri": registry.uri,
                         **registry.auth.model_dump(
                             by_alias=True

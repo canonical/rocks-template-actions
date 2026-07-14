@@ -395,6 +395,7 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
                 "tag": "1.0-24.04_edge",
                 "artifact-name": "mock-rock-1.0-esm-apps-esm-infra",
                 "pro-enabled": True,
+                "pro-artifact-passphrase": "MY_TOKEN",
                 "registry-uri": "docker.io/ubuntu",
                 "registry-auth-method": "basic",
                 "registry-auth-username": "DOCKER_IO_USERNAME",
@@ -405,6 +406,7 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
                 "tag": "1.0-24.04_edge",
                 "artifact-name": "mock-rock-1.0-esm-apps-esm-infra",
                 "pro-enabled": True,
+                "pro-artifact-passphrase": "MY_TOKEN",
                 "registry-uri": "public.ecr.aws/ubuntu",
                 "registry-auth-method": "ecr",
                 "registry-auth-region": "us-east-1",
@@ -416,6 +418,7 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
                 "tag": "1.0-24.04_edge",
                 "artifact-name": "mock-rock-1.0-esm-apps-esm-infra",
                 "pro-enabled": True,
+                "pro-artifact-passphrase": "MY_TOKEN",
                 "registry-uri": "public.ecr.aws/rocksdev",
                 "registry-auth-method": "ecr-public",
                 "registry-auth-region": "us-east-1",
@@ -424,7 +427,7 @@ def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
             },
         ]
     }
-    assert sorted(upload_matrix) == sorted(expected_upload_matrix)
+    assert upload_matrix == expected_upload_matrix
 
 
 def test_conflicting_artifact_names_should_fail(fake_open, fake_exists):
@@ -651,6 +654,7 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
                 "tag": "1.0-24.04_edge",
                 "artifact-name": "mock-rock-1.0",
                 "pro-enabled": False,
+                "pro-artifact-passphrase": "",
                 "registry-uri": "docker.io/ubuntu",
                 "registry-auth-method": "basic",
                 "registry-auth-username": "DOCKER_IO_USERNAME",
@@ -661,6 +665,7 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
                 "tag": "1.0-24.04_edge",
                 "artifact-name": "mock-rock-1.0",
                 "pro-enabled": False,
+                "pro-artifact-passphrase": "",
                 "registry-uri": "public.ecr.aws/ubuntu",
                 "registry-auth-method": "ecr",
                 "registry-auth-region": "us-east-1",
@@ -672,6 +677,7 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
                 "tag": "1.0-24.04_edge",
                 "artifact-name": "mock-rock-1.0-esm-apps",
                 "pro-enabled": True,
+                "pro-artifact-passphrase": "CUSTOM_KEY",
                 "registry-uri": "myregistry.azurecr.io/ubuntu",
                 "registry-auth-method": "bearer",
                 "registry-auth-token": "ACR_PASSWORD",
@@ -681,6 +687,7 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
                 "tag": "1.0-24.04_edge",
                 "artifact-name": "mock-rock-1.0-esm-infra-fips-ros",
                 "pro-enabled": True,
+                "pro-artifact-passphrase": "MY_TOKEN",
                 "registry-uri": "myregistry.azurecr.io/ubuntu",
                 "registry-auth-method": "bearer",
                 "registry-auth-token": "ACR_PASSWORD",
@@ -690,6 +697,7 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
                 "tag": "1.0-24.04_edge",
                 "artifact-name": "mock-rock-1.0-esm-infra-fips-ros",
                 "pro-enabled": True,
+                "pro-artifact-passphrase": "MY_TOKEN",
                 "registry-uri": "public.ecr.aws/ubuntu",
                 "registry-auth-method": "ecr",
                 "registry-auth-region": "us-east-1",
@@ -698,7 +706,7 @@ def test_image_with_duplicated_entries_should_deduplicate(fake_open, fake_exists
             },
         ]
     }
-    assert sorted(upload_matrix) == sorted(expected_upload_matrix)
+    assert upload_matrix == expected_upload_matrix
 
 
 @pytest.fixture
@@ -826,6 +834,7 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(
                 "tag": "1.0-24.04_edge",
                 "artifact-name": "mock-rock-1.0",
                 "pro-enabled": False,
+                "pro-artifact-passphrase": "",
                 "registry-uri": "docker.io/ubuntu",
                 "registry-auth-method": "basic",
                 "registry-auth-username": "DOCKER_IO_USERNAME",
@@ -836,6 +845,7 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(
                 "tag": "1.0-24.04_edge",
                 "artifact-name": "mock-rock-1.0",
                 "pro-enabled": False,
+                "pro-artifact-passphrase": "",
                 "registry-uri": "public.ecr.aws/ubuntu",
                 "registry-auth-method": "ecr",
                 "registry-auth-region": "us-east-1",
@@ -846,6 +856,7 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(
                 "name": "another-rock",
                 "tag": "2.0-24.04_edge",
                 "pro-enabled": False,
+                "pro-artifact-passphrase": "",
                 "artifact-name": "another-rock-2.0",
                 "registry-uri": "myregistry.azurecr.io/ubuntu",
                 "registry-auth-method": "bearer",
@@ -855,6 +866,7 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(
                 "name": "another-rock",
                 "tag": "2.0-24.04_edge",
                 "pro-enabled": False,
+                "pro-artifact-passphrase": "",
                 "artifact-name": "another-rock-2.0",
                 "registry-uri": "docker.io/ubuntu",
                 "registry-auth-method": "basic",
@@ -865,6 +877,7 @@ def test_multiple_images_wildcard_should_glob_rockcraft_yaml(
                 "name": "another-rock",
                 "tag": "2.0-24.04_edge",
                 "pro-enabled": False,
+                "pro-artifact-passphrase": "",
                 "artifact-name": "another-rock-2.0",
                 "registry-uri": "public.ecr.aws/ubuntu",
                 "registry-auth-method": "ecr",
