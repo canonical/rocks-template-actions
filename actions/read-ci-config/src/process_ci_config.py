@@ -97,7 +97,9 @@ class RegistryConfigEntry(BaseModel):
 
 class ImageEntry(BaseModel):
     directory: str = Field(
-        ..., description="Path to the directory containing the rockcraft.yaml"
+        default="",
+        description="Path to the directory containing the rockcraft.yaml. "
+        "Defaults to the repository root.",
     )
 
     lfs: bool = Field(
@@ -198,7 +200,12 @@ class CIConfig(BaseModel):
         return expanded_images
 
     @staticmethod
-    def artifact_name(dir: str) -> str:
+    def artifact_name(dir: str, name: str = "") -> str:
+        # When the rockcraft.yaml is at the repository root, the directory is
+        # empty (or "."). In that case, there is no path to derive an artifact
+        # name from, so fall back to the rock's name.
+        if dir in ("", ".", "./"):
+            return name
         return dir.replace("/", "-")
 
     @staticmethod
@@ -216,8 +223,14 @@ class CIConfig(BaseModel):
         """
         # Pattern to match base version id like '22.04', '20.04', or 'devel'
         base_version_id_pattern = r"(\d{2}(\.|@)\d{2}|devel)$"
+        # Normalize root directory ("", ".", "./") so the path resolves to
+        # "rockcraft.yaml" at the repository root.
+        normalized_dir = image_directory.strip("/")
+        if normalized_dir == ".":
+            normalized_dir = ""
+        rockcraft_path = os.path.join(normalized_dir, "rockcraft.yaml")
         with open(
-            os.path.join(image_directory, "rockcraft.yaml"),
+            rockcraft_path,
             "r",
             encoding="utf-8",
         ) as f:
@@ -231,7 +244,7 @@ class CIConfig(BaseModel):
             match = re.search(base_version_id_pattern, base)
             if not match:
                 raise ValueError(
-                    f"Base '{base}' in '{image_directory}/rockcraft.yaml' does not match the expected pattern.\n"
+                    f"Base '{base}' in '{rockcraft_path}' does not match the expected pattern.\n"
                     + f"See https://documentation.ubuntu.com/rockcraft/stable/reference/rockcraft.yaml/#base for supported base values."
                 )
             base = match.group(1)
@@ -264,7 +277,7 @@ class CIConfig(BaseModel):
 
             pro_services: list[str] = sorted(image.pro.services) if image.pro else []
             name, tag = self.image_name_and_tag(image.directory)
-            artifact_base = self.artifact_name(image.directory)
+            artifact_base = self.artifact_name(image.directory, name)
             run_tests = (Path(image.directory) / "spread.yaml").exists()
             artifact_suffix = "-" + "-".join(pro_services) if pro_services else ""
 
@@ -316,7 +329,7 @@ class CIConfig(BaseModel):
 
             image_dir, image_pro_srvs, passphrase = image_tuple
             name, tag = self.image_name_and_tag(image_dir)
-            base_artifact = self.artifact_name(image_dir)
+            base_artifact = self.artifact_name(image_dir, name)
             artifact_suffix = (
                 "-" + "-".join(sorted(image_pro_srvs)) if image_pro_srvs else ""
             )
