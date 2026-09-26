@@ -1,0 +1,29 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      build-matrix:
+        type: string
+        required: true
+      arch-map:
+        type: string
+        required: true    
+
+jobs:
+  build:
+    strategy:
+      matrix: ${{ fromJSON(inputs.build-matrix) }}
+    uses: canonical/oci-factory/.github/workflows/Build-Rock.yaml@f217eb0acc0d0359c4c8afa772a263ca069bb656 # main
+    with:
+      rock-repo: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+      rock-repo-commit: ${{ github.head_ref || github.ref_name }}
+      rockfile-directory: ${{ matrix.directory }}
+      oci-archive-name: ${{ matrix.artifact-name }}
+      arch-map: ${{ inputs.arch-map }}
+      rockcraft-test: ${{ matrix.run-tests }}
+      pro-services: ${{ matrix.pro-services }}
+    secrets:
+      source-github-token: ${{ secrets.REPO_CLONER_TOKEN }}
+      pro-token: ${{ secrets[matrix.pro-token] }}
+      pro-artifact-passphrase: ${{ secrets[matrix.pro-artifact-passphrase] }}

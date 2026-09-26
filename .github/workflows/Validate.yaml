@@ -1,0 +1,36 @@
+name: Validate
+
+on:
+  workflow_call:
+    outputs:
+      ghcr-upload:
+        value: ${{ jobs.validate.outputs.ghcr-upload }}
+      build-matrix:
+        value: ${{ jobs.validate.outputs.build-matrix }}
+      upload-matrix:
+        value: ${{ jobs.validate.outputs.upload-matrix }}
+      arch-map:
+        value: ${{ jobs.validate.outputs.arch-map }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      ghcr-upload: ${{ steps.read-ci-config.outputs.ghcr-upload }}
+      build-matrix: ${{ steps.read-ci-config.outputs.build-matrix }}
+      upload-matrix: ${{ steps.read-ci-config.outputs.upload-matrix }}
+      arch-map: ${{ steps.set-map.outputs.arch-map }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Read .github/ci.yaml
+        id: read-ci-config
+        uses: ./actions/read-ci-config
+
+      - name: Set Architecture Map
+        id: set-map
+        run: |
+          if [[ "${{ github.repository_owner }}" != "canonical" ]]; then
+            echo 'arch-map={"amd64":["ubuntu-24.04"],"arm64":["ubuntu-24.04-arm"]}' >> $GITHUB_OUTPUT
+          fi

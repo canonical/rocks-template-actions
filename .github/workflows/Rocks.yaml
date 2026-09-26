@@ -1,0 +1,36 @@
+name: Rocks
+
+on:
+  workflow_call:
+
+jobs:
+  validate:
+    uses: ./.github/workflows/Validate.yaml
+    secrets: inherit
+
+  build:
+    needs: [validate]
+    uses: ./.github/workflows/Build.yaml
+    with:
+      build-matrix: ${{ needs.validate.outputs.build-matrix }}
+      arch-map: ${{ needs.validate.outputs.arch-map }}
+    secrets: inherit
+
+  test:
+    needs: [validate, build]
+    uses: ./.github/workflows/Test.yaml
+    with:
+      build-matrix: ${{ needs.validate.outputs.build-matrix }}
+    secrets: inherit
+
+  upload:
+    needs: [validate, test]
+    if: |
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/Upload.yaml
+    with:
+      build-matrix: ${{ needs.validate.outputs.build-matrix }}
+      upload-matrix: ${{ needs.validate.outputs.upload-matrix }}
+      ghcr-upload: ${{ needs.validate.outputs.ghcr-upload }}
+    secrets: inherit
