@@ -1,4 +1,4 @@
-name: Rocks
+name: Rock
 
 on:
   workflow_call:
