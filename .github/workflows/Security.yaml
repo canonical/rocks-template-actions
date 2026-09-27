@@ -1,0 +1,34 @@
+name: Security
+
+on:
+  workflow_call:
+
+jobs:
+  read-config:
+    runs-on: ubuntu-latest
+    outputs:
+      ghcr-scanning: ${{ steps.read-ci-config.outputs.ghcr-cve-scan }}
+      build-matrix: ${{ steps.read-ci-config.outputs.build-matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Read .github/ci.yaml
+        id: read-ci-config
+        uses: ./actions/read-ci-config
+
+  run-scan:
+    name: Run scan for released images
+    needs: [read-config]
+    if: |
+      needs.read-config.outputs.ghcr-scanning == 'true'
+    uses: canonical/oci-factory/.github/workflows/Vulnerability-Scan.yaml@f217eb0acc0d0359c4c8afa772a263ca069bb656 # main
+    strategy:
+      matrix: ${{ fromJson(needs.read-config.outputs.build-matrix) }}
+    with:
+      oci-image-name: ghcr.io/${{ github.repository }}/${{ matrix.name }}:${{ matrix.tag }}
+      create-issue: true
+      trivyignore-path: ${{ matrix.directory }}/.trivyignore
+    permissions:
+      contents: read
+      packages: read
