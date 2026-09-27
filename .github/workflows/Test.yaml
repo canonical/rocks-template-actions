@@ -1,0 +1,19 @@
+name: Test
+
+on:
+  workflow_call:
+    inputs:
+      build-matrix:
+        type: string
+        required: true
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(inputs.build-matrix) }}
+    uses: canonical/oci-factory/.github/workflows/Test-Rock.yaml@f217eb0acc0d0359c4c8afa772a263ca069bb656 # main
+    with:
+      oci-archive-name: ${{ matrix.artifact-name }}
+    secrets:
+      pro-artifact-passphrase: ${{ secrets[matrix.pro-artifact-passphrase] }}

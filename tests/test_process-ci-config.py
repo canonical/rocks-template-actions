@@ -91,7 +91,9 @@ def fake_open(monkeypatch):
     from io import StringIO
 
     def fake_file_open(file, mode="r", encoding=None):
-        if "mock-rock/1.0/rockcraft.yaml" in file:
+        if file == "rockcraft.yaml":
+            return StringIO(ROCKCRAFT_YAML_MOCK_ROCK_1_0)
+        elif "mock-rock/1.0/rockcraft.yaml" in file:
             return StringIO(ROCKCRAFT_YAML_MOCK_ROCK_1_0)
         elif "another-rock/2.0/rockcraft.yaml" in file:
             return StringIO(ROCKCRAFT_YAML_ANOTHER_ROCK_2_0)
@@ -995,3 +997,95 @@ def test_should_be_able_to_set_lfs_include_exclude():
     image = ci_config.images[0]
     assert image.lfs is True  # pylint: disable=no-member
     assert image.lfs_include == "*.tar.gz"
+
+
+@pytest.mark.parametrize("directory", ["", ".", "./"])
+def test_artifact_name_at_root_uses_rock_name(directory):
+    assert CIConfig.artifact_name(directory, "mock-rock") == "mock-rock"
+
+
+def test_artifact_name_with_nested_directory():
+    assert CIConfig.artifact_name("mock-rock/1.0", "mock-rock") == "mock-rock-1.0"
+
+
+def test_omitted_directory_defaults_to_root(fake_open, fake_exists):
+    sample_yaml = dedent(
+        """\
+        version: 1
+        ghcr:
+            upload: true
+            cve-scan: false
+        registries:
+        images:
+            - lfs: false
+        """
+    )
+    config_data = yaml.safe_load(sample_yaml)
+    ci_config = CIConfig(**config_data)
+    assert ci_config.images[0].directory == ""
+    build_matrix = ci_config.build_matrix()
+    assert build_matrix["include"][0]["directory"] == ""
+    assert build_matrix["include"][0]["artifact-name"] == "mock-rock"
+
+
+@pytest.mark.parametrize("directory", ["", ".", "./"])
+def test_root_directory_build_matrix_should_pass(fake_open, fake_exists, directory):
+    sample_yaml = dedent(
+        f"""\
+        version: 1
+        ghcr:
+            upload: true
+            cve-scan: false
+        registries:
+        images:
+            - directory: "{directory}"
+        """
+    )
+    config_data = yaml.safe_load(sample_yaml)
+    ci_config = CIConfig(**config_data)
+    build_matrix = ci_config.build_matrix()
+    assert build_matrix == {
+        "include": [
+            {
+                "name": "mock-rock",
+                "tag": "1.0-24.04_edge",
+                "pro-services": "",
+                "pro-token": "",
+                "pro-artifact-passphrase": "",
+                "directory": directory,
+                "lfs": False,
+                "lfs-include": "",
+                "artifact-name": "mock-rock",
+                "run-tests": False,
+            }
+        ]
+    }
+
+
+def test_root_directory_upload_matrix_should_pass(fake_open, fake_exists):
+    sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
+        """
+        images:
+            - directory: ""
+              registries:
+                - docker.io
+        """
+    )
+    config_data = yaml.safe_load(sample_yaml)
+    ci_config = CIConfig(**config_data)
+    upload_matrix = ci_config.upload_matrix()
+    assert upload_matrix == {
+        "include": [
+            {
+                "name": "mock-rock",
+                "tag": "1.0-24.04_edge",
+                "artifact-name": "mock-rock",
+                "pro-enabled": False,
+                "pro-artifact-passphrase": "",
+                "registry-uri": "docker.io/ubuntu",
+                "registry-auth-method": "basic",
+                "registry-auth-username": "DOCKER_IO_USERNAME",
+                "registry-auth-password": "DOCKER_IO_PASSWORD",
+            }
+        ]
+    }
