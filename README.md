@@ -1,4 +1,3 @@
-# Rocks Template Actions
+# Rocks Actions
 
-This is a repository that holds the custom actions used by the
-[rocks-template](https://github.com/canonical/rocks-template).
+This is a repository that holds a set custom actions and workflows to build, test, scan and publish rocks.
