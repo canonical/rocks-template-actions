@@ -10,6 +10,7 @@ jobs:
 
   build:
     needs: [validate]
+    if: "${{ needs.validate.outputs.build-matrix != '{\"include\": []}' }}"
     uses: ./.github/workflows/Build.yaml
     with:
       build-matrix: ${{ needs.validate.outputs.build-matrix }}
@@ -18,6 +19,7 @@ jobs:
 
   test:
     needs: [validate, build]
+    if: "${{ needs.validate.outputs.build-matrix != '{\"include\": []}' }}"
     uses: ./.github/workflows/Test.yaml
     with:
       build-matrix: ${{ needs.validate.outputs.build-matrix }}
@@ -26,6 +28,7 @@ jobs:
   upload:
     needs: [validate, test]
     if: |
+      needs.validate.outputs.build-matrix != '{"include": []}' &&
       github.event_name != 'pull_request' &&
       github.ref == 'refs/heads/main'
     uses: ./.github/workflows/Upload.yaml

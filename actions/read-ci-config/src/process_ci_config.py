@@ -209,6 +209,18 @@ class CIConfig(BaseModel):
         return dir.replace("/", "-")
 
     @staticmethod
+    def rockcraft_path(image_directory: str) -> str:
+        """Resolve the path to the rockcraft.yaml for the given image directory.
+
+        Normalizes the root directory ("", ".", "./") so the path resolves to
+        "rockcraft.yaml" at the repository root.
+        """
+        normalized_dir = image_directory.strip("/")
+        if normalized_dir == ".":
+            normalized_dir = ""
+        return os.path.join(normalized_dir, "rockcraft.yaml")
+
+    @staticmethod
     def image_name_and_tag(image_directory: str) -> tuple[str, str]:
         """Read the rockcraft.yaml in the given directory to get the image name and tag.
 
@@ -223,12 +235,7 @@ class CIConfig(BaseModel):
         """
         # Pattern to match base version id like '22.04', '20.04', or 'devel'
         base_version_id_pattern = r"(\d{2}(\.|@)\d{2}|devel)$"
-        # Normalize root directory ("", ".", "./") so the path resolves to
-        # "rockcraft.yaml" at the repository root.
-        normalized_dir = image_directory.strip("/")
-        if normalized_dir == ".":
-            normalized_dir = ""
-        rockcraft_path = os.path.join(normalized_dir, "rockcraft.yaml")
+        rockcraft_path = CIConfig.rockcraft_path(image_directory)
         with open(
             rockcraft_path,
             "r",
@@ -266,6 +273,16 @@ class CIConfig(BaseModel):
         added_images: set[tuple[str, frozenset[str]]] = set()
 
         for image in self.images:  # pylint: disable=not-an-iterable
+            # Skip images whose rockcraft.yaml is not present in the repo. This
+            # allows the workflows to be skipped gracefully (empty matrix) when
+            # a repo has no rock to build.
+            if not Path(self.rockcraft_path(image.directory)).exists():
+                print(
+                    f"::warning::Skipping rock at '{image.directory}': "
+                    f"no rockcraft.yaml found."
+                )
+                continue
+
             key: tuple[str, frozenset[str]] = (
                 image.directory,
                 frozenset(image.pro.services if image.pro else []),
@@ -315,6 +332,9 @@ class CIConfig(BaseModel):
 
         # Group registries by image directory and pro status
         for image in self.images:  # pylint: disable=not-an-iterable
+            # Skip images whose rockcraft.yaml is not present in the repo.
+            if not Path(self.rockcraft_path(image.directory)).exists():
+                continue
             key: tuple[str, frozenset[str], str] = (
                 image.directory,
                 frozenset(image.pro.services if image.pro else []),

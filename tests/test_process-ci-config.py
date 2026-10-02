@@ -114,10 +114,26 @@ def fake_open(monkeypatch):
 @pytest.fixture
 def fake_exists(monkeypatch):
     def fake_os_path_exists(path):
-        if "mock-rock/1.0/spread.yaml" in str(path):
+        path = str(path)
+        if "mock-rock/1.0/spread.yaml" in path:
             return True
-        elif "another-rock/2.0/spread.yaml" in str(path):
+        elif "another-rock/2.0/spread.yaml" in path:
             return False
+        # Treat the mock rocks' rockcraft.yaml files as present so the matrix
+        # generation does not skip them. A missing rockcraft.yaml (any other
+        # path) results in the image being skipped.
+        elif path.endswith("rockcraft.yaml"):
+            return any(
+                f"{rock}/rockcraft.yaml" in path
+                for rock in (
+                    "mock-rock/1.0",
+                    "another-rock/2.0",
+                    "another-rock/2.0-esm-apps",
+                    "latest-rock/latest",
+                    "invalid-rock/1.0",
+                    "devel-rock/1.0",
+                )
+            ) or path == "rockcraft.yaml"
         else:
             return False  # Default to file not existing
 
@@ -349,6 +365,24 @@ def test_empty_images_should_pass():
     assert ci_config.images == []
     build_matrix = ci_config.build_matrix()
     assert build_matrix == {"include": []}
+
+
+def test_missing_rockcraft_yaml_should_produce_empty_matrix(fake_exists):
+    """When an image's rockcraft.yaml is absent, it is skipped and the
+    resulting build/upload matrices are empty so downstream jobs are skipped."""
+    sample_yaml = GENERAL_CI_YAML_WITH_REGISTRIES + dedent(
+        """
+        images:
+            - directory: no-such-rock/1.0
+              registries:
+                - docker.io
+        """
+    )
+    config_data = yaml.safe_load(sample_yaml)
+    ci_config = CIConfig(**config_data)
+    assert ci_config.build_matrix() == {"include": []}
+    assert ci_config.upload_matrix() == {"include": []}
+
 
 
 def test_valid_simple_configuration_should_pass(fake_open, fake_exists):
